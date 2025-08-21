@@ -1,0 +1,209 @@
+<template>
+    <lightning-card title="Document Generation Analytics" icon-name="standard:dashboard">
+        
+        <!-- Card Actions -->
+        <div slot="actions">
+            <lightning-button-group>
+                <lightning-button 
+                    variant="neutral" 
+                    label="Refresh" 
+                    icon-name="utility:refresh" 
+                    onclick={handleRefresh} 
+                    disabled={isLoading}>
+                </lightning-button>
+                <lightning-button 
+                    variant="neutral" 
+                    label="Export" 
+                    icon-name="utility:download" 
+                    onclick={handleExport} 
+                    disabled={isLoading}>
+                </lightning-button>
+                <lightning-button 
+                    variant="brand" 
+                    label="Advanced Analytics" 
+                    onclick={handleAdvancedAnalytics}>
+                </lightning-button>
+            </lightning-button-group>
+        </div>
+
+        <div class="slds-card__body slds-card__body_inner">
+            
+            <!-- Loading State -->
+            <template if:true={isLoading}>
+                <div class="slds-text-align_center slds-p-around_large">
+                    <lightning-spinner alternative-text="Loading analytics..." size="large"></lightning-spinner>
+                    <p class="slds-m-top_medium">Loading analytics data...</p>
+                </div>
+            </template>
+
+            <!-- Dashboard Content -->
+            <template if:false={isLoading}>
+                
+                <!-- Key Metrics Row -->
+                <div class="metrics-row slds-grid slds-wrap slds-gutters_small slds-m-bottom_large">
+                    <!-- Total Documents -->
+                    <div class="slds-col slds-size_1-of-4">
+                        <lightning-card variant="narrow">
+                            <div class="metric-card">
+                                <div class="metric-value">{dashboardData.documentMetrics.totalDocuments}</div>
+                                <div class="metric-label">Total Documents</div>
+                                <div class="metric-change positive">
+                                    +{dashboardData.documentMetrics.documentsCreatedToday} today
+                                </div>
+                            </div>
+                        </lightning-card>
+                    </div>
+
+                    <!-- Compliance Rate -->
+                    <div class="slds-col slds-size_1-of-4">
+                        <lightning-card variant="narrow">
+                            <div class="metric-card">
+                                <div class="metric-value">{dashboardData.complianceMetrics.passRate}%</div>
+                                <div class="metric-label">Compliance Rate</div>
+                                <div class={complianceRateClass}>{complianceRateText}</div>
+                            </div>
+                        </lightning-card>
+                    </div>
+
+                    <!-- Avg Processing Time -->
+                    <div class="slds-col slds-size_1-of-4">
+                        <lightning-card variant="narrow">
+                            <div class="metric-card">
+                                <div class="metric-value">{dashboardData.performanceMetrics.averageProcessingTime}s</div>
+                                <div class="metric-label">Avg Processing Time</div>
+                                <div class={performanceClass}>{performanceText}</div>
+                            </div>
+                        </lightning-card>
+                    </div>
+
+                    <!-- System Uptime -->
+                    <div class="slds-col slds-size_1-of-4">
+                        <lightning-card variant="narrow">
+                            <div class="metric-card">
+                                <div class="metric-value">{dashboardData.performanceMetrics.systemUptime}%</div>
+                                <div class="metric-label">System Uptime</div>
+                                <div class="metric-change positive">Last 30 days</div>
+                            </div>
+                        </lightning-card>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="charts-row slds-grid slds-wrap slds-gutters_small slds-m-bottom_large">
+                    <!-- Document Status Breakdown -->
+                    <div class="slds-col slds-size_1-of-2">
+                        <lightning-card title="Document Status Breakdown" icon-name="utility:chart">
+                            <div class="chart-container">
+                                <template if:true={hasDocumentStatusData}>
+                                    <canvas lwc:ref="documentStatusChart" class="status-chart"></canvas>
+                                </template>
+                                <template if:false={hasDocumentStatusData}>
+                                    <div class="no-data-message slds-text-align_center slds-p-around_large">
+                                        <p>No document data available</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </lightning-card>
+                    </div>
+
+                    <!-- Compliance Trends -->
+                    <div class="slds-col slds-size_1-of-2">
+                        <lightning-card title="Compliance Trends" icon-name="utility:trend">
+                            <div class="chart-container">
+                                <template if:true={hasComplianceTrendData}>
+                                    <canvas lwc:ref="complianceTrendChart" class="trend-chart"></canvas>
+                                </template>
+                                <template if:false={hasComplianceTrendData}>
+                                    <div class="no-data-message slds-text-align_center slds-p-around_large">
+                                        <p>No compliance trend data available</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </lightning-card>
+                    </div>
+                </div>
+
+                <!-- AI Insights -->
+                <template if:true={hasInsights}>
+                    <lightning-card title="AI-Powered Insights" icon-name="utility:einstein" class="insights-card">
+                        <div class="insights-container">
+                            <template for:each={dashboardData.insights} for:item="insight">
+                                <div key={insight.title} class={insight.cssClass}>
+                                    <div class="insight-header slds-grid slds-grid_align-spread">
+                                        <h4 class="insight-title">{insight.title}</h4>
+                                        <lightning-badge label={insight.severity} variant={insight.severityVariant}></lightning-badge>
+                                    </div>
+                                    <p class="insight-description slds-m-bottom_small">{insight.description}</p>
+                                    <p class="insight-recommendation"><strong>Recommendation:</strong> {insight.recommendation}</p>
+                                    <div class="insight-confidence">
+                                        <span>Confidence: {insight.confidence}%</span>
+                                        <div class="confidence-bar">
+                                            <div class="confidence-fill" style={insight.confidenceStyle}></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </lightning-card>
+                </template>
+
+                <!-- User Activity -->
+                <lightning-card title="User Activity" icon-name="utility:people" class="activity-card">
+                    <div class="activity-container">
+                        <div class="slds-grid slds-wrap slds-gutters_small">
+                            <div class="slds-col slds-size_1-of-2">
+                                <h4 class="slds-text-heading_small slds-m-bottom_small">
+                                    Active Users: {dashboardData.userActivityMetrics.totalActiveUsers}
+                                </h4>
+                                <template if:true={hasActionBreakdown}>
+                                    <div class="action-breakdown">
+                                        <template for:each={actionBreakdownList} for:item="action">
+                                            <div key={action.name} class="action-item slds-grid slds-grid_align-spread slds-p-vertical_x-small">
+                                                <span>{action.label}</span>
+                                                <span class="action-count">{action.count}</span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <div class="slds-col slds-size_1-of-2">
+                                <h4 class="slds-text-heading_small slds-m-bottom_small">Recent Activity</h4>
+                                <template if:true={hasActivityTrend}>
+                                    <div class="activity-trend">
+                                        <template for:each={recentActivity} for:item="activity">
+                                            <div key={activity.date} class="activity-day slds-grid slds-grid_align-spread slds-p-vertical_x-small">
+                                                <span>{activity.date}</span>
+                                                <span class="activity-users">{activity.userCount} users</span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </lightning-card>
+
+                <!-- Performance Benchmarks -->
+                <lightning-card title="Performance Benchmarks" icon-name="utility:metrics" class="performance-card">
+                    <div class="benchmark-container">
+                        <template if:true={hasOperationMetrics}>
+                            <div class="benchmark-grid slds-grid slds-wrap slds-gutters_small">
+                                <template for:each={operationMetricsList} for:item="metric">
+                                    <div key={metric.name} class="slds-col slds-size_1-of-3">
+                                        <div class="benchmark-item">
+                                            <div class="benchmark-name">{metric.label}</div>
+                                            <div class="benchmark-value">{metric.value}ms</div>
+                                            <div class={metric.statusClass}>{metric.statusText}</div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </lightning-card>
+
+            </template>
+        </div>
+    </lightning-card>
+</template>

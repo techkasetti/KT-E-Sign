@@ -1,0 +1,58 @@
+.step-container {
+    padding: 1rem;
+    min-height: 300px;
+}
+
+.generated-content {
+    border: 1px solid #d8dde6;
+    border-radius: 0.25rem;
+    padding: 1rem;
+    background-color: #fafaf9;
+}
+
+.clause-content {
+    background-color: white;
+    border: 1px solid #d8dde6;
+    border-radius: 0.25rem;
+    padding: 1rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.generation-progress {
+    padding: 2rem;
+}
+
+.completion-status {
+    padding: 1rem;
+}
+
+.document-details {
+    text-align: left;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.action-buttons {
+    margin-top: 1rem;
+}
+
+.compliance-status {
+    border-top: 1px solid #d8dde6;
+    padding-top: 1rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .slds-grid.slds-gutters.slds-wrap .slds-col {
+        flex-basis: 100%;
+        max-width: 100%;
+    }
+    
+    .step-container {
+        padding: 0.5rem;
+        min-height: 250px;
+    }
+}

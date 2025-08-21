@@ -1,0 +1,85 @@
+<template>
+    <lightning-card title="Document Viewer" icon-name="standard:document">
+        <div class="slds-card__body slds-card__body_inner">
+            <!-- Document Header Information -->
+            <div class="document-header slds-m-bottom_medium">
+                <div class="slds-grid slds-gutters slds-wrap">
+                    <div class="slds-col slds-size_1-of-2">
+                        <dl class="slds-list_horizontal">
+                            <dt class="slds-item_label slds-text-color_weak">Document ID:</dt>
+                            <dd class="slds-item_detail">{documentId}</dd>
+                            <dt class="slds-item_label slds-text-color_weak">Status:</dt>
+                            <dd class="slds-item_detail">
+                                <lightning-badge label={documentStatus} variant={statusVariant}></lightning-badge>
+                            </dd>
+                        </dl>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2">
+                        <dl class="slds-list_horizontal">
+                            <dt class="slds-item_label slds-text-color_weak">Created:</dt>
+                            <dd class="slds-item_detail">{createdDate}</dd>
+                            <dt class="slds-item_label slds-text-color_weak">Last Modified:</dt>
+                            <dd class="slds-item_detail">{lastModifiedDate}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Content -->
+            <div class="document-content-section slds-m-bottom_medium">
+                <h3 class="slds-text-heading_small slds-m-bottom_small">Document Content:</h3>
+                <div class="document-content-viewer slds-box">
+                    <lightning-formatted-rich-text value={documentContent}></lightning-formatted-rich-text>
+                </div>
+            </div>
+
+            <!-- Signature Section -->
+            <template if:true={hasSignatureRequests}>
+                <div class="signature-section slds-m-bottom_medium">
+                    <h3 class="slds-text-heading_small slds-m-bottom_small">Signature Requests:</h3>
+                    <template for:each={signatureRequests} for:item="request">
+                        <div key={request.Id} class="signature-request-item slds-box slds-m-bottom_small">
+                            <div class="slds-grid slds-grid_align-spread">
+                                <div class="slds-col">
+                                    <p><strong>{request.SignerName__c}</strong> ({request.SignerEmail__c})</p>
+                                    <p class="slds-text-color_weak">Requested: {request.Created_Date__c}</p>
+                                </div>
+                                <div class="slds-col slds-no-flex">
+                                    <lightning-badge label={request.Status__c} 
+                                                   variant={request.statusVariant}></lightning-badge>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <!-- Action Buttons -->
+            <div class="action-section">
+                <lightning-button-group>
+                    <lightning-button variant="brand" 
+                                    label="Request Signature" 
+                                    onclick={handleRequestSignature}
+                                    disabled={isSignatureDisabled}>
+                    </lightning-button>
+                    <lightning-button variant="neutral" 
+                                    label="Download PDF" 
+                                    onclick={handleDownloadPDF}>
+                    </lightning-button>
+                    <lightning-button variant="neutral" 
+                                    label="View History" 
+                                    onclick={handleViewHistory}>
+                    </lightning-button>
+                </lightning-button-group>
+            </div>
+        </div>
+    </lightning-card>
+
+    <!-- Signature Request Modal -->
+    <template if:true={showSignatureModal}>
+        <c-signature-pad record-id={selectedRequestId} 
+                        onsignaturecomplete={handleSignatureComplete}
+                        oncancel={handleModalCancel}>
+        </c-signature-pad>
+    </template>
+</template>

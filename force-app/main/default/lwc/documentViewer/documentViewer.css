@@ -1,0 +1,51 @@
+.document-content-viewer {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 1rem;
+    background-color: white;
+    border: 1px solid #d8dde6;
+    border-radius: 0.25rem;
+}
+
+.document-header {
+    background-color: #fafaf9;
+    padding: 1rem;
+    border-radius: 0.25rem;
+    border: 1px solid #d8dde6;
+}
+
+.signature-request-item {
+    border-left: 4px solid #0176d3;
+    background-color: #fafaf9;
+}
+
+.action-section {
+    text-align: center;
+    padding-top: 1rem;
+    border-top: 1px solid #d8dde6;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .slds-grid .slds-col {
+        flex-basis: 100%;
+        max-width: 100%;
+    }
+    
+    .document-content-viewer {
+        max-height: 300px;
+    }
+}
+
+/* Print styles */
+@media print {
+    .action-section,
+    .slds-card__footer {
+        display: none;
+    }
+    
+    .document-content-viewer {
+        max-height: none;
+        overflow: visible;
+    }
+}

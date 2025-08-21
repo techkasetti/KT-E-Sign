@@ -1,0 +1,79 @@
+.signature-canvas {
+    border: 2px solid #d8dde6;
+    border-radius: 0.25rem;
+    background-color: white;
+    cursor: crosshair;
+    display: block;
+    margin: 0 auto;
+    touch-action: none;
+}
+
+.canvas-container {
+    text-align: center;
+    background-color: #fafaf9;
+    padding: 1rem;
+    border-radius: 0.25rem;
+}
+
+.typed-signature-preview {
+    font-family: 'Dancing Script', cursive;
+    font-size: 2rem;
+    text-align: center;
+    padding: 1rem;
+    border: 1px solid #d8dde6;
+    border-radius: 0.25rem;
+    background-color: white;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.signature-image {
+    max-width: 300px;
+    max-height: 150px;
+    border: 1px solid #d8dde6;
+    border-radius: 0.25rem;
+    display: block;
+    margin: 0 auto;
+}
+
+.document-content {
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.instructions-section,
+.agreement-section {
+    font-size: 0.875rem;
+}
+
+.success-message {
+    border-left: 4px solid #2e844a;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .signature-canvas {
+        width: 100%;
+        max-width: 350px;
+    }
+    
+    .slds-grid .slds-col {
+        flex-basis: 100%;
+        max-width: 100%;
+    }
+    
+    .typed-signature-preview {
+        font-size: 1.5rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .slds-card__footer,
+    .canvas-controls {
+        display: none;
+    }
+}
