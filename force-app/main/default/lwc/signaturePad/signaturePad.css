@@ -1,79 +1,91 @@
-.signature-canvas {
-    border: 2px solid #d8dde6;
-    border-radius: 0.25rem;
-    background-color: white;
-    cursor: crosshair;
-    display: block;
-    margin: 0 auto;
-    touch-action: none;
-}
-
-.canvas-container {
-    text-align: center;
-    background-color: #fafaf9;
-    padding: 1rem;
-    border-radius: 0.25rem;
-}
-
-.typed-signature-preview {
-    font-family: 'Dancing Script', cursive;
-    font-size: 2rem;
-    text-align: center;
-    padding: 1rem;
-    border: 1px solid #d8dde6;
-    border-radius: 0.25rem;
-    background-color: white;
-    min-height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.signature-image {
-    max-width: 300px;
-    max-height: 150px;
-    border: 1px solid #d8dde6;
-    border-radius: 0.25rem;
-    display: block;
-    margin: 0 auto;
+.document-preview {
+    background-color: #f8f9fa;
+    border-left: 4px solid #1589ee;
 }
 
 .document-content {
-    font-family: 'Courier New', monospace;
-    font-size: 0.875rem;
     line-height: 1.5;
 }
 
-.instructions-section,
+.document-text {
+    background-color: white;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+    font-style: italic;
+}
+
+.signer-info {
+    border-bottom: 1px solid #e5e5e5;
+    padding-bottom: 1rem;
+}
+
+.signature-method {
+    border-bottom: 1px solid #e5e5e5;
+    padding-bottom: 1rem;
+}
+
+.typed-signature-display {
+    font-family: 'Brush Script MT', cursive;
+    font-size: 2rem;
+    color: #1589ee;
+    padding: 1rem;
+    border: 2px dashed #1589ee;
+    text-align: center;
+    margin-top: 0.5rem;
+}
+
+.signature-canvas-container {
+    border: 2px solid #d8dde6;
+    border-radius: 4px;
+    display: inline-block;
+    background-color: white;
+}
+
+.signature-canvas {
+    display: block;
+    cursor: crosshair;
+}
+
+.canvas-controls {
+    text-align: right;
+}
+
+.uploaded-signature-preview {
+    border: 1px solid #d8dde6;
+    border-radius: 4px;
+    padding: 1rem;
+    background-color: white;
+}
+
+.signature-image-preview {
+    max-width: 200px;
+    max-height: 100px;
+    border: 1px solid #d8dde6;
+}
+
 .agreement-section {
-    font-size: 0.875rem;
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+    border-left: 4px solid #28a745;
 }
 
-.success-message {
-    border-left: 4px solid #2e844a;
+.submit-section {
+    text-align: center;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e5e5;
 }
 
-/* Mobile responsive */
 @media (max-width: 768px) {
     .signature-canvas {
         width: 100%;
-        max-width: 350px;
+        max-width: 300px;
     }
     
-    .slds-grid .slds-col {
-        flex-basis: 100%;
-        max-width: 100%;
-    }
-    
-    .typed-signature-preview {
-        font-size: 1.5rem;
-    }
-}
-
-/* Print styles */
-@media print {
-    .slds-card__footer,
-    .canvas-controls {
-        display: none;
+    .slds-grid.slds-wrap .slds-col {
+        width: 100% !important;
+        padding-right: 0 !important;
+        margin-bottom: 0.5rem;
     }
 }

@@ -1,51 +1,80 @@
-.document-content-viewer {
-    max-height: 400px;
-    overflow-y: auto;
-    padding: 1rem;
-    background-color: white;
-    border: 1px solid #d8dde6;
-    border-radius: 0.25rem;
-}
-
 .document-header {
-    background-color: #fafaf9;
-    padding: 1rem;
-    border-radius: 0.25rem;
-    border: 1px solid #d8dde6;
+    background-color: #f8f9fa;
+    border-left: 4px solid #1589ee;
 }
 
-.signature-request-item {
-    border-left: 4px solid #0176d3;
-    background-color: #fafaf9;
-}
-
-.action-section {
+.action-buttons {
     text-align: center;
+    border-bottom: 1px solid #e5e5e5;
+    padding-bottom: 1rem;
+}
+
+.document-content {
+    min-height: 200px;
+}
+
+.clause-content {
+    background-color: white;
+    border-radius: 4px;
+    padding: 1.5rem;
+    line-height: 1.6;
+    font-size: 1rem;
+}
+
+.clause-text {
+    white-space: pre-wrap;
+}
+
+.no-content {
+    text-align: center;
+    padding: 2rem;
+    color: #706e6b;
+}
+
+.signature-requests {
+    border-top: 1px solid #e5e5e5;
     padding-top: 1rem;
-    border-top: 1px solid #d8dde6;
 }
 
-/* Responsive design */
+.no-requests {
+    text-align: center;
+    padding: 1rem;
+    color: #706e6b;
+}
+
+.compliance-section {
+    border-top: 1px solid #e5e5e5;
+    padding-top: 1rem;
+}
+
+.compliance-success {
+    color: #04844b;
+    border-color: #04844b;
+}
+
+.compliance-error {
+    color: #c23934;
+    border-color: #c23934;
+}
+
+.compliance-warning {
+    color: #fe9339;
+    border-color: #fe9339;
+}
+
+/* Modal styling */
+.slds-modal__container {
+    width: 50%;
+    max-width: 600px;
+}
+
 @media (max-width: 768px) {
-    .slds-grid .slds-col {
-        flex-basis: 100%;
-        max-width: 100%;
+    .slds-modal__container {
+        width: 90%;
     }
     
-    .document-content-viewer {
-        max-height: 300px;
-    }
-}
-
-/* Print styles */
-@media print {
-    .action-section,
-    .slds-card__footer {
-        display: none;
-    }
-    
-    .document-content-viewer {
-        max-height: none;
-        overflow: visible;
+    .slds-col.slds-size_1-of-2 {
+        width: 100%;
+        margin-bottom: 0.5rem;
     }
 }

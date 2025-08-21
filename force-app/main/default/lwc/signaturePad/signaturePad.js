@@ -1,42 +1,47 @@
-import { LightningElement, api, track } from 'lwc';
+import { LightningElement, api, track, wire } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { getRecord } from 'lightning/uiRecordApi';
 import submitSignature from '@salesforce/apex/SignatureRequestController.submitSignature';
-import getSignatureRequest from '@salesforce/apex/SignatureRequestController.getSignatureRequest';
+
+const FIELDS = ['Signature_Request__c.SignerName__c', 'Signature_Request__c.SignerEmail__c', 'Signature_Request__c.Status__c', 'Signature_Request__c.DocumentId__c'];
 
 export default class SignaturePad extends LightningElement {
     @api recordId; // Signature Request ID
-    
-    // Signer information
     @track signerName = '';
     @track signerEmail = '';
-    @track documentContent = '';
-    
-    // Signature method
     @track selectedSignatureMethod = 'type';
     @track typedSignature = '';
-    @track drawnSignatureData = '';
-    @track uploadedImageUrl = '';
-    
-    // Canvas drawing state
-    @track isDrawing = false;
-    @track lastX = 0;
-    @track lastY = 0;
-    
-    // Form state
-    @track agreementChecked = false;
-    @track isSignatureComplete = false;
+    @track hasAgreed = false;
     @track isSubmitting = false;
+    @track uploadedSignatureUrl = '';
+    @track documentContent = '';
+    @track signatureRequest = {};
     
-    // Signature method options
+    // Canvas drawing variables
+    isDrawing = false;
+    canvas;
+    context;
+    
     signatureMethodOptions = [
         { label: 'Type Signature', value: 'type' },
         { label: 'Draw Signature', value: 'draw' },
-        { label: 'Upload Image', value: 'upload' }
+        { label: 'Upload Signature', value: 'upload' }
     ];
-    
+
+    @wire(getRecord, { recordId: '$recordId', fields: FIELDS })
+    wiredRecord({ error, data }) {
+        if (data) {
+            this.signatureRequest = data;
+            this.signerName = data.fields.SignerName__c.value;
+            this.signerEmail = data.fields.SignerEmail__c.value;
+            this.loadDocumentContent(data.fields.DocumentId__c.value);
+        } else if (error) {
+            this.showToast('Error', 'Failed to load signature request', 'error');
+        }
+    }
+
     // Computed properties
-    get isTypeSignature() {
+    get isTypedSignature() {
         return this.selectedSignatureMethod === 'type';
     }
     
@@ -49,71 +54,25 @@ export default class SignaturePad extends LightningElement {
     }
     
     get isSubmitDisabled() {
-        if (!this.agreementChecked || !this.signerName || !this.signerEmail) {
+        if (!this.signerName || !this.signerEmail || !this.hasAgreed) {
             return true;
         }
         
-        switch (this.selectedSignatureMethod) {
-            case 'type':
-                return !this.typedSignature;
-            case 'draw':
-                return !this.drawnSignatureData;
-            case 'upload':
-                return !this.uploadedImageUrl;
-            default:
-                return true;
+        if (this.selectedSignatureMethod === 'type' && !this.typedSignature) {
+            return true;
         }
-    }
-    
-    // Lifecycle hooks
-    connectedCallback() {
-        this.loadSignatureRequest();
-        // Set up canvas after component renders
-        setTimeout(() => {
-            this.initializeCanvas();
-        }, 100);
-    }
-    
-    renderedCallback() {
-        if (this.isDrawSignature && !this.canvasInitialized) {
-            this.initializeCanvas();
+        
+        if (this.selectedSignatureMethod === 'draw' && !this.hasCanvasSignature()) {
+            return true;
         }
-    }
-    
-    // Data loading
-    async loadSignatureRequest() {
-        if (!this.recordId) return;
         
-        try {
-            const request = await getSignatureRequest({ requestId: this.recordId });
-            this.signerEmail = request.SignerEmail__c;
-            this.signerName = request.SignerName__c;
-            // Load document content (simplified)
-            this.documentContent = 'Document content will be loaded here...';
-        } catch (error) {
-            this.showToast('Error', 'Failed to load signature request: ' + error.body?.message, 'error');
+        if (this.selectedSignatureMethod === 'upload' && !this.uploadedSignatureUrl) {
+            return true;
         }
+        
+        return false;
     }
-    
-    // Canvas initialization and drawing
-    initializeCanvas() {
-        const canvas = this.template.querySelector('.signature-canvas');
-        if (!canvas) return;
-        
-        canvas.width = 400;
-        canvas.height = 200;
-        
-        const ctx = canvas.getContext('2d');
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        
-        this.canvas = canvas;
-        this.ctx = ctx;
-        this.canvasInitialized = true;
-    }
-    
+
     // Event handlers
     handleSignerNameChange(event) {
         this.signerName = event.target.value;
@@ -125,10 +84,10 @@ export default class SignaturePad extends LightningElement {
     
     handleSignatureMethodChange(event) {
         this.selectedSignatureMethod = event.detail.value;
-        // Clear previous signature data
+        // Clear previous signature data when method changes
         this.typedSignature = '';
-        this.drawnSignatureData = '';
-        this.uploadedImageUrl = '';
+        this.uploadedSignatureUrl = '';
+        this.clearCanvas();
     }
     
     handleTypedSignatureChange(event) {
@@ -136,143 +95,118 @@ export default class SignaturePad extends LightningElement {
     }
     
     handleAgreementChange(event) {
-        this.agreementChecked = event.target.checked;
+        this.hasAgreed = event.target.checked;
+    }
+
+    // Canvas drawing methods
+    renderedCallback() {
+        if (this.selectedSignatureMethod === 'draw') {
+            this.initializeCanvas();
+        }
     }
     
-    // Mouse events for drawing
-        handleMouseDown(event) {
+    initializeCanvas() {
+        const canvas = this.template.querySelector('.signature-canvas');
+        if (canvas && !this.canvas) {
+            this.canvas = canvas;
+            this.context = canvas.getContext('2d');
+            this.context.strokeStyle = '#000000';
+            this.context.lineWidth = 2;
+            this.context.lineCap = 'round';
+        }
+    }
+    
+    handleMouseDown(event) {
         this.isDrawing = true;
         const rect = this.canvas.getBoundingClientRect();
-        this.lastX = event.clientX - rect.left;
-        this.lastY = event.clientY - rect.top;
-        
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.lastX, this.lastY);
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        this.context.beginPath();
+        this.context.moveTo(x, y);
     }
-
+    
     handleMouseMove(event) {
         if (!this.isDrawing) return;
-        
         const rect = this.canvas.getBoundingClientRect();
-        const currentX = event.clientX - rect.left;
-        const currentY = event.clientY - rect.top;
-        
-        this.ctx.lineTo(currentX, currentY);
-        this.ctx.stroke();
-        
-        this.lastX = currentX;
-        this.lastY = currentY;
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        this.context.lineTo(x, y);
+        this.context.stroke();
     }
-
+    
     handleMouseUp() {
         this.isDrawing = false;
-        this.ctx.beginPath();
-        this.updateDrawnSignature();
     }
-
-    // Touch events for mobile support
-    handleTouchStart(event) {
-        event.preventDefault();
-        const touch = event.touches[0];
-        const mouseEvent = new MouseEvent('mousedown', {
-            clientX: touch.clientX,
-            clientY: touch.clientY
-        });
-        this.handleMouseDown(mouseEvent);
-    }
-
-    handleTouchMove(event) {
-        event.preventDefault();
-        const touch = event.touches[0];
-        const mouseEvent = new MouseEvent('mousemove', {
-            clientX: touch.clientX,
-            clientY: touch.clientY
-        });
-        this.handleMouseMove(mouseEvent);
-    }
-
-    handleTouchEnd(event) {
-        event.preventDefault();
-        this.handleMouseUp();
-    }
-
-    // Canvas utility methods
+    
     handleClearCanvas() {
-        if (this.ctx && this.canvas) {
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            this.drawnSignatureData = '';
+        if (this.context && this.canvas) {
+            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         }
     }
-
-    updateDrawnSignature() {
-        if (this.canvas) {
-            this.drawnSignatureData = this.canvas.toDataURL('image/png');
-        }
+    
+    hasCanvasSignature() {
+        if (!this.canvas || !this.context) return false;
+        const imageData = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        return imageData.data.some((channel, index) => index % 4 !== 3 && channel !== 0);
     }
 
     // File upload handler
     handleUploadFinished(event) {
         const uploadedFiles = event.detail.files;
         if (uploadedFiles.length > 0) {
-            // In production, you would get the actual file URL from Salesforce Files
-            this.uploadedImageUrl = '/servlet/servlet.FileDownload?file=' + uploadedFiles[0].documentId;
+            this.uploadedSignatureUrl = `/lightning/r/ContentDocument/${uploadedFiles[0].documentId}/view`;
             this.showToast('Success', 'Signature image uploaded successfully', 'success');
         }
     }
 
-    // Signature submission
+    // Submit signature
     async handleSubmitSignature() {
         this.isSubmitting = true;
         
         try {
-            const signatureData = this.getSignatureData();
+            let signatureData = '';
             
-            const result = await submitSignature({
+            // Prepare signature data based on method
+            if (this.selectedSignatureMethod === 'type') {
+                signatureData = `TYPED:${this.typedSignature}`;
+            } else if (this.selectedSignatureMethod === 'draw') {
+                signatureData = `DRAWN:${this.canvas.toDataURL()}`;
+            } else if (this.selectedSignatureMethod === 'upload') {
+                signatureData = `UPLOADED:${this.uploadedSignatureUrl}`;
+            }
+            
+            // Submit the signature
+            await submitSignature({
                 requestId: this.recordId,
                 signatureData: signatureData,
-                signatureMethod: this.selectedSignatureMethod
+                signerName: this.signerName,
+                signerEmail: this.signerEmail
             });
-
-            if (result) {
-                this.isSignatureComplete = true;
-                this.showToast('Success', 'Signature submitted successfully!', 'success');
-                
-                // Dispatch custom event for parent components
-                this.dispatchEvent(new CustomEvent('signaturecomplete', {
-                    detail: {
-                        requestId: this.recordId,
-                        signatureMethod: this.selectedSignatureMethod
-                    }
-                }));
-            }
+            
+            this.showToast('Success', 'Signature submitted successfully!', 'success');
+            
+            // Optionally navigate away or refresh
+            // this.handleCancel();
+            
         } catch (error) {
-            this.showToast('Error', 'Failed to submit signature: ' + error.body?.message, 'error');
+            this.showToast('Error', error.body.message || 'Failed to submit signature', 'error');
         } finally {
             this.isSubmitting = false;
         }
     }
-
-    // Get signature data based on method
-    getSignatureData() {
-        switch (this.selectedSignatureMethod) {
-            case 'type':
-                return this.typedSignature;
-            case 'draw':
-                return this.drawnSignatureData;
-            case 'upload':
-                return this.uploadedImageUrl;
-            default:
-                return '';
-        }
-    }
-
-    // Cancel handler
+    
     handleCancel() {
         // Navigate back or close modal
-        this.dispatchEvent(new CustomEvent('cancel'));
+        const closeEvent = new CustomEvent('close');
+        this.dispatchEvent(closeEvent);
     }
-
-    // Utility method for showing toast messages
+    
+    // Helper methods
+    loadDocumentContent(documentId) {
+        // Mock document content - in real implementation, load from DocumentLifecycleConfiguration__c
+        this.documentContent = `This is a sample document that requires your electronic signature. Document ID: ${documentId}. Please review the terms and conditions before signing.`;
+    }
+    
     showToast(title, message, variant) {
         const evt = new ShowToastEvent({
             title: title,

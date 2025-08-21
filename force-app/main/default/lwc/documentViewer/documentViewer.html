@@ -1,85 +1,154 @@
 <template>
-    <lightning-card title="Document Viewer" icon-name="standard:document">
+    <lightning-card title="Document Viewer" icon-name="standard:file">
         <div class="slds-card__body slds-card__body_inner">
+            
             <!-- Document Header Information -->
-            <div class="document-header slds-m-bottom_medium">
-                <div class="slds-grid slds-gutters slds-wrap">
-                    <div class="slds-col slds-size_1-of-2">
-                        <dl class="slds-list_horizontal">
-                            <dt class="slds-item_label slds-text-color_weak">Document ID:</dt>
-                            <dd class="slds-item_detail">{documentId}</dd>
-                            <dt class="slds-item_label slds-text-color_weak">Status:</dt>
-                            <dd class="slds-item_detail">
-                                <lightning-badge label={documentStatus} variant={statusVariant}></lightning-badge>
-                            </dd>
-                        </dl>
-                    </div>
-                    <div class="slds-col slds-size_1-of-2">
-                        <dl class="slds-list_horizontal">
-                            <dt class="slds-item_label slds-text-color_weak">Created:</dt>
-                            <dd class="slds-item_detail">{createdDate}</dd>
-                            <dt class="slds-item_label slds-text-color_weak">Last Modified:</dt>
-                            <dd class="slds-item_detail">{lastModifiedDate}</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Document Content -->
-            <div class="document-content-section slds-m-bottom_medium">
-                <h3 class="slds-text-heading_small slds-m-bottom_small">Document Content:</h3>
-                <div class="document-content-viewer slds-box">
-                    <lightning-formatted-rich-text value={documentContent}></lightning-formatted-rich-text>
-                </div>
-            </div>
-
-            <!-- Signature Section -->
-            <template if:true={hasSignatureRequests}>
-                <div class="signature-section slds-m-bottom_medium">
-                    <h3 class="slds-text-heading_small slds-m-bottom_small">Signature Requests:</h3>
-                    <template for:each={signatureRequests} for:item="request">
-                        <div key={request.Id} class="signature-request-item slds-box slds-m-bottom_small">
-                            <div class="slds-grid slds-grid_align-spread">
-                                <div class="slds-col">
-                                    <p><strong>{request.SignerName__c}</strong> ({request.SignerEmail__c})</p>
-                                    <p class="slds-text-color_weak">Requested: {request.Created_Date__c}</p>
-                                </div>
-                                <div class="slds-col slds-no-flex">
-                                    <lightning-badge label={request.Status__c} 
-                                                   variant={request.statusVariant}></lightning-badge>
-                                </div>
-                            </div>
+            <template if:true={documentData}>
+                <div class="document-header slds-box slds-m-bottom_medium">
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-col slds-size_1-of-2">
+                            <p><strong>Document Title:</strong> {documentData.DocumentTitle__c}</p>
+                            <p><strong>Region:</strong> {documentData.Region__c}</p>
+                            <p><strong>Contract Type:</strong> {documentData.ContractType__c}</p>
                         </div>
-                    </template>
-                </div>
-            </template>
+                        <div class="slds-col slds-size_1-of-2">
+                            <p><strong>Status:</strong> 
+                                <lightning-badge label={documentData.ProcessingStatus__c} variant={statusVariant}>
+                                </lightning-badge>
+                            </p>
+                            <p><strong>Role:</strong> {documentData.Role__c}</p>
+<p><strong>Created:</strong> {formattedCreatedDate}</p>
+<p><strong>Last Modified:</strong> {formattedModifiedDate}</p>
+</div>
+</div>
+</div>
 
-            <!-- Action Buttons -->
-            <div class="action-section">
-                <lightning-button-group>
-                    <lightning-button variant="brand" 
-                                    label="Request Signature" 
-                                    onclick={handleRequestSignature}
-                                    disabled={isSignatureDisabled}>
-                    </lightning-button>
-                    <lightning-button variant="neutral" 
-                                    label="Download PDF" 
-                                    onclick={handleDownloadPDF}>
-                    </lightning-button>
-                    <lightning-button variant="neutral" 
-                                    label="View History" 
-                                    onclick={handleViewHistory}>
-                    </lightning-button>
-                </lightning-button-group>
-            </div>
+<!-- Action Buttons -->
+<div class="action-buttons slds-m-bottom_medium">
+    <lightning-button 
+        variant="brand" 
+        label="Request Signature" 
+        onclick={handleRequestSignature}
+        class="slds-m-right_small">
+    </lightning-button>
+    <lightning-button 
+        variant="neutral" 
+        label="Download PDF" 
+        onclick={handleDownloadPDF}
+        class="slds-m-right_small">
+    </lightning-button>
+    <lightning-button 
+        variant="outline-brand" 
+        label="View History" 
+        onclick={handleViewHistory}>
+    </lightning-button>
+</div>
+
+<!-- Document Content -->
+<div class="document-content slds-box slds-theme_shade">
+    <h3 class="slds-text-heading_small slds-m-bottom_medium">Document Content</h3>
+    <template if:true={documentData.GeneratedClause__c}>
+        <div class="clause-content">
+            <div class="clause-text" lwc:dom="manual"></div>
         </div>
-    </lightning-card>
-
-    <!-- Signature Request Modal -->
-    <template if:true={showSignatureModal}>
-        <c-signature-pad record-id={selectedRequestId} 
-                        onsignaturecomplete={handleSignatureComplete}
-                        oncancel={handleModalCancel}>
-        </c-signature-pad>
     </template>
+    <template if:false={documentData.GeneratedClause__c}>
+        <div class="no-content">
+            <lightning-icon icon-name="utility:info" size="small" class="slds-m-right_small"></lightning-icon>
+            <span>No document content available. Please generate the document first.</span>
+        </div>
+    </template>
+</div>
+
+<!-- Signature Requests Section -->
+<div class="signature-requests slds-m-top_medium">
+    <h3 class="slds-text-heading_small">Signature Requests</h3>
+    <template if:true={hasSignatureRequests}>
+        <lightning-datatable
+            key-field="Id"
+            data={signatureRequests}
+            columns={signatureColumns}
+            hide-checkbox-column="true"
+            onrowaction={handleRowAction}>
+        </lightning-datatable>
+    </template>
+    <template if:false={hasSignatureRequests}>
+        <div class="no-requests">
+            <lightning-icon icon-name="utility:signature" size="small" class="slds-m-right_small"></lightning-icon>
+            <span>No signature requests found.</span>
+        </div>
+    </template>
+</div>
+
+<!-- Compliance Status -->
+<template if:true={documentData.ComplianceStatus__c}>
+    <div class="compliance-section slds-m-top_medium">
+        <div class={complianceStatusClass}>
+            <lightning-icon icon-name={complianceIcon} size="small" class="slds-m-right_small"></lightning-icon>
+            <strong>Compliance Status:</strong> {documentData.ComplianceStatus__c}
+            <template if:true={complianceMessage}>
+                <p class="slds-m-top_x-small">{complianceMessage}</p>
+            </template>
+        </div>
+    </div>
+</template>
+</template>
+
+<!-- Request Signature Modal -->
+<template if:true={showSignatureModal}>
+    <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+        <div class="slds-modal__container">
+            <header class="slds-modal__header">
+                <lightning-button-icon 
+                    icon-name="utility:close" 
+                    onclick={handleCloseModal} 
+                    alternative-text="close" 
+                    variant="bare-inverse" 
+                    class="slds-modal__close">
+                </lightning-button-icon>
+                <h2 class="slds-text-heading_medium">Request Signature</h2>
+            </header>
+            <div class="slds-modal__content slds-p-around_medium">
+                <lightning-input 
+                    type="email" 
+                    label="Signer Email" 
+                    value={modalSignerEmail}
+                    onchange={handleModalEmailChange}
+                    required>
+                </lightning-input>
+                <lightning-input 
+                    type="text" 
+                    label="Signer Name" 
+                    value={modalSignerName}
+                    onchange={handleModalNameChange}
+                    class="slds-m-top_small"
+                    required>
+                </lightning-input>
+                <lightning-textarea 
+                    label="Message (Optional)" 
+                    value={modalMessage}
+                    onchange={handleModalMessageChange}
+                    class="slds-m-top_small"
+                    placeholder="Enter a custom message for the signer">
+                </lightning-textarea>
+            </div>
+            <footer class="slds-modal__footer">
+                <lightning-button 
+                    variant="neutral" 
+                    label="Cancel" 
+                    onclick={handleCloseModal}>
+                </lightning-button>
+                <lightning-button 
+                    variant="brand" 
+                    label="Send Request" 
+                    onclick={handleSendSignatureRequest}
+                    disabled={isModalDisabled}>
+                </lightning-button>
+            </footer>
+        </div>
+    </section>
+    <div class="slds-backdrop slds-backdrop_open"></div>
+</template>
+</div>
+</lightning-card>
 </template>

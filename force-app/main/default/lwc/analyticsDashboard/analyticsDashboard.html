@@ -1,4 +1,5 @@
 <template>
+    <!-- Document Generation Analytics -->
     <lightning-card title="Document Generation Analytics" icon-name="standard:dashboard">
         
         <!-- Card Actions -->
@@ -204,6 +205,65 @@
                 </lightning-card>
 
             </template>
+        </div>
+    </lightning-card>
+
+    <!-- E-Signature Analytics Dashboard -->
+    <lightning-card title="E-Signature Analytics Dashboard" icon-name="standard:analytics">
+        <div class="slds-card__body slds-card__body_inner">
+            
+            <!-- Key Metrics Cards -->
+            <div class="metrics-grid slds-grid slds-wrap slds-m-bottom_large">
+                <div class="slds-col slds-size_1-of-4 slds-p-around_small">
+                    <div class="metric-card slds-box slds-text-align_center">
+                        <h3 class="metric-number">{totalDocuments}</h3>
+                        <p class="metric-label">Total Documents</p>
+                    </div>
+                </div>
+                <div class="slds-col slds-size_1-of-4 slds-p-around_small">
+                    <div class="metric-card slds-box slds-text-align_center">
+                        <h3 class="metric-number">{pendingSignatures}</h3>
+                        <p class="metric-label">Pending Signatures</p>
+                    </div>
+                </div>
+                <div class="slds-col slds-size_1-of-4 slds-p-around_small">
+                    <div class="metric-card slds-box slds-text-align_center">
+                        <h3 class="metric-number">{completedThisMonth}</h3>
+                        <p class="metric-label">Completed This Month</p>
+                    </div>
+                </div>
+                <div class="slds-col slds-size_1-of-4 slds-p-around_small">
+                    <div class="metric-card slds-box slds-text-align_center">
+                        <h3 class="metric-number">{averageCompletionTime}h</h3>
+                        <p class="metric-label">Avg Completion Time</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Charts Section -->
+            <div class="charts-section slds-grid slds-wrap">
+                <div class="slds-col slds-size_1-of-2 slds-p-around_small">
+                    <div class="chart-container slds-box">
+                        <h3 class="slds-text-heading_small slds-m-bottom_medium">Signatures by Region</h3>
+                        <div class="chart-placeholder">
+                            <p class="slds-text-align_center slds-p-around_medium">
+                                Region chart visualization
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-col slds-size_1-of-2 slds-p-around_small">
+                    <div class="chart-container slds-box">
+                        <h3 class="slds-text-heading_small slds-m-bottom_medium">Compliance Status</h3>
+                        <div class="chart-placeholder">
+                            <p class="slds-text-align_center slds-p-around_medium">
+                                Compliance chart visualization
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
         </div>
     </lightning-card>
 </template>
