@@ -1,4 +1,225 @@
+/* Developer_build_step_by_step_impl_e_sign v6 ..........................................................*/
+
+
+/* 
+.navigation-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1rem;
+    border-top: 1px solid #d8dde6;
+}
+
+.preview-section {
+    background-color: #f3f3f3;
+    border-radius: 0.25rem;
+}
+
+.document-preview p {
+    margin: 0.25rem 0;
+    font-size: 0.875rem;
+}
+
+.compliance-section {
+    border-left: 4px solid #d8dde6;
+}
+
+.compliance-section.slds-text-color_success {
+    border-left-color: #2e844a;
+}
+
+.compliance-section.slds-text-color_error {
+    border-left-color: #c23934;
+}
+
+.success-section {
+    text-align: center;
+    padding: 1.5
+.success-section {
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.generation-section {
+    padding: 2rem;
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.modal-content {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.slds-modal__content {
+    padding: 1rem !important;
+}
+
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .navigation-buttons {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+
+.slds-spinner_container {
+    position: relative;
+}
+
+.slds-progress-indicator {
+    margin-bottom: 2rem;
+}
+
+.slds-form-element__label {
+    font-weight: 600;
+}
+
+.compliance-status {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.violations-list {
+    background-color: #fef7f7;
+    border: 1px solid #c23934;
+    border-radius: 0.25rem;
+    padding: 1rem;
+    margin-top: 0.5rem;
+}
+
+.violations-list ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.violations-list li {
+    margin-bottom: 0.25rem;
+    color: #c23934;
+}
+ */
+
+
+
+
+/* Developer_build_step_by_step_impl_e_sign v3.......................................................... */
+
+
+
+/* .clause-preview {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 0.5rem;
+    background-color: #f3f3f3;
+    border-radius: 0.25rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.compliance-status {
+    padding: 0.75rem;
+    border-radius: 0.25rem;
+    margin-bottom: 1rem;
+}
+
+.step-container {
+    min-height: 300px;
+    padding: 1rem;
+}
+
+.generation-progress {
+    padding: 2rem;
+}
+
+@media (max-width: 768px) {
+    .slds-grid.slds-gutters.slds-wrap .slds-col {
+        flex-basis: 100%;
+        max-width: 100%;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .action-buttons lightning-button {
+        width: 100%;
+    }
+} */
+
+
+
+
+
+/* Developer_build_step_by_step_impl_e_sign v2 ............................................................*/
+
+
+/* .content-preview {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 0.5rem;
+    border: 1px solid #dddbda;
+    border-radius: 4px;
+    background-color: #fafaf9;
+    white-space: pre-wrap;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.compliance-section {
+    border: 1px solid #dddbda;
+    border-radius: 4px;
+    padding: 1rem;
+}
+
+.compliance-text {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.action-buttons lightning-button {
+    width: 100%;
+}
+
+.slds-modal__content {
+    padding: 1rem !important;
+}
+
 .step-indicator {
+    margin-bottom: 2rem;
+}
+
+.slds-progress-indicator__item .slds-button {
+    font-weight: 400;
+}
+
+.slds-progress-indicator__item_active .slds-button {
+    font-weight: 700;
+}
+ */
+
+
+
+/* Developer_build_step_by_step_impl_e_sign v1 ...........................................................*/
+
+
+/* .step-indicator {
     margin-bottom: 1rem;
 }
 
@@ -49,43 +270,70 @@
     .selection-form {
         grid-template-columns: 1fr;
     }
-}
-/* Enhanced mobile touch support */
-@media (max-width: 768px) {
-    .signature-canvas {
-        width: 100%;
-        max-width: 350px;
-        height: 150px;
-        touch-action: none; /* Prevent scrolling while drawing */
-    }
-    
-    .signature-canvas-container {
-        -webkit-overflow-scrolling: touch;
-        overflow: hidden;
-    }
-    
-    .typed-signature-display {
-        font-size: 1.8rem;
-        padding: 0.8rem;
-    }
-    
-    .metric-card {
-        margin-bottom: 1rem;
-    }
-    
-    .charts-section .slds-col {
-        width: 100% !important;
-        margin-bottom: 1rem;
-    }
+} */
+
+
+
+
+
+/* Developer_build_step_by_step_impl_e_sign.........................................................*/
+
+/* 
+
+.step-container {
+    padding: 1rem;
+    min-height: 300px;
 }
 
-/* Touch device optimization */
-@media (hover: none) and (pointer: coarse) {
-    .signature-canvas {
-        cursor: default;
+.generated-content {
+    border: 1px solid #d8dde6;
+    border-radius: 0.25rem;
+    padding: 1rem;
+    background-color: #fafaf9;
+}
+
+.clause-content {
+    background-color: white;
+    border: 1px solid #d8dde6;
+    border-radius: 0.25rem;
+    padding: 1rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.generation-progress {
+    padding: 2rem;
+}
+
+.completion-status {
+    padding: 1rem;
+}
+
+.document-details {
+    text-align: left;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.action-buttons {
+    margin-top: 1rem;
+}
+
+.compliance-status {
+    border-top: 1px solid #d8dde6;
+    padding-top: 1rem;
+}
+
+@media (max-width: 768px) {
+    .slds-grid.slds-gutters.slds-wrap .slds-col {
+        flex-basis: 100%;
+        max-width: 100%;
     }
     
-    lightning-button {
-        min-height: 44px; /* iOS recommended touch target size */
+    .step-container {
+        padding: 0.5rem;
+        min-height: 250px;
     }
-}
+} */

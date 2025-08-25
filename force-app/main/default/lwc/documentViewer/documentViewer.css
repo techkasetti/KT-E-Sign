@@ -1,4 +1,313 @@
+/* Developer_build_step_by_step_impl_e_sign v6........................................................... */
+
+/* 
+.action-buttons {
+    display: flex;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.signature-requests-section {
+    margin-top: 1rem;
+}
+
+.document-content-section {
+    border-top: 1px solid #d8dde6;
+    padding-top: 1.5rem;
+}
+
+.document-text {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+    line-height: 1.6;
+    border: 1px solid #d8dde6;
+}
+
+.status-indicators {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+}
+
+.empty-state {
+    color: #706e6b;
+    background-color: #f3f3f3;
+    border-radius: 0.25rem;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+}
+
+.error-container {
+    padding: 2rem;
+    color: #c23934;
+}
+
+.slds-modal__content {
+    padding: 1rem !important;
+}
+
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .slds-grid.slds-gutters {
+        flex-direction: column;
+    }
+    
+    .status-indicators {
+        margin-top: 1rem;
+    }
+}
+
+lightning-datatable {
+    border: 1px solid #d8dde6;
+    border-radius: 0.25rem;
+}
+
+.slds-text-color_success {
+    color: #2e844a;
+}
+
+.slds-text-color_error {
+    color: #c23934;
+}
+
+.slds-text-color_default {
+    color: #0176d3;
+}
+
+.slds-text-color_weak {
+    color: #706e6b;
+}
+
+ */
+
+
+/* Developer_build_step_by_step_impl_e_sign v2.............................................................. */
+
+
+/* 
 .document-header {
+    border-bottom: 1px solid #dddbda;
+    padding-bottom: 1
+	.document-header {
+border-bottom: 1px solid #dddbda;
+padding-bottom: 1rem;
+margin-bottom: 1rem;
+}
+
+.document-meta {
+font-size: 0.875rem;
+color: #706e6b;
+}
+
+.action-buttons {
+text-align: right;
+}
+
+.document-content-display {
+border: 1px solid #dddbda;
+border-radius: 4px;
+padding: 1rem;
+background-color: white;
+max-height: 400px;
+overflow-y: auto;
+}
+
+.content-text {
+font-family: 'Salesforce Sans', Arial, sans-serif;
+line-height: 1.6;
+}
+
+.content-actions {
+display: flex;
+gap: 0.25rem;
+}
+
+.signature-requests-section {
+border-top: 1px solid #dddbda;
+padding-top: 1rem;
+}
+
+.activity-timeline-section {
+border-top: 1px solid #dddbda;
+padding-top: 1rem;
+}
+
+.timeline-container {
+position: relative;
+}
+
+.timeline-item {
+position: relative;
+padding-left: 3rem;
+padding-bottom: 1rem;
+border-left: 2px solid #dddbda;
+margin-left: 1rem;
+}
+
+.timeline-item:last-child {
+border-left: none;
+}
+
+.slds-timeline__icon {
+position: absolute;
+left: -1.5rem;
+top: 0.25rem;
+background-color: white;
+border: 2px solid #dddbda;
+border-radius: 50%;
+width: 2rem;
+height: 2rem;
+display: flex;
+align-items: center;
+justify-content: center;
+}
+
+.compliance-success {
+color: #2e844a;
+display: flex;
+align-items: center;
+}
+
+.compliance-error {
+color: #c23934;
+display: flex;
+align-items: center;
+}
+
+.compliance-warning {
+color: #fe9339;
+display: flex;
+align-items: center;
+}
+
+.fullscreen-content {
+font-size: 1.1rem;
+line-height: 1.8;
+max-height: 70vh;
+overflow-y: auto;
+padding: 1rem;
+}
+
+.slds-modal_large .slds-modal__container {
+width: 80%;
+max-width: 1200px;
+}
+
+@media (max-width: 768px) {
+.slds-col.slds-medium-size_1-of-2 {
+width: 100%;
+margin-bottom: 1rem;
+}
+
+.action-buttons {
+text-align: center;
+margin-top: 1rem;
+}
+
+.document-content-display {
+max-height: 300px;
+}
+
+.timeline-item {
+padding-left: 2rem;
+margin-left: 0.5rem;
+}
+
+.slds-timeline__icon {
+left: -1rem;
+width: 1.5rem;
+height: 1.5rem;
+}
+}
+
+@media print {
+.action-buttons,
+.slds-card__footer,
+.signature-requests-section {
+display: none;
+}
+
+.document-content-display {
+border: none;
+box-shadow: none;
+max-height: none;
+overflow: visible;
+}
+}
+
+.slds-spinner_container {
+position: relative;
+}
+
+.timeline-item:hover {
+background-color: #fafaf9;
+border-radius: 4px;
+margin-left: 0.75rem;
+padding-left: 2.25rem;
+}
+
+.status-pending {
+color: #fe9339;
+}
+
+.status-signed {
+color: #2e844a;
+}
+
+.status-rejected {
+color: #c23934;
+}
+
+.status-expired {
+color: #706e6b;
+}
+
+.document-content-display::-webkit-scrollbar {
+width: 6px;
+}
+
+.document-content-display::-webkit-scrollbar-track {
+background: #f1f1f1;
+border-radius: 4px;
+}
+
+.document-content-display::-webkit-scrollbar-thumb {
+background: #c1c1c1;
+border-radius: 4px;
+}
+
+.document-content-display::-webkit-scrollbar-thumb:hover {
+background: #a8a8a8;
+} */
+
+
+
+/* Developer_build_step_by_step_impl_e_sign v1............................................................... */
+
+/* .document-header {
     background-color: #f8f9fa;
     border-left: 4px solid #1589ee;
 }
@@ -62,7 +371,6 @@
     border-color: #fe9339;
 }
 
-/* Modal styling */
 .slds-modal__container {
     width: 50%;
     max-width: 600px;
@@ -77,4 +385,61 @@
         width: 100%;
         margin-bottom: 0.5rem;
     }
+} */
+
+
+
+
+/* Developer_build_step_by_step_impl_e_sign......................................................... */
+
+
+
+/* .document-content-viewer {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 1rem;
+    background-color: white;
+    border: 1px solid #d8dde6;
+    border-radius: 0.25rem;
 }
+
+.document-header {
+    background-color: #fafaf9;
+    padding: 1rem;
+    border-radius: 0.25rem;
+    border: 1px solid #d8dde6;
+}
+
+.signature-request-item {
+    border-left: 4px solid #0176d3;
+    background-color: #fafaf9;
+}
+
+.action-section {
+    text-align: center;
+    padding-top: 1rem;
+    border-top: 1px solid #d8dde6;
+}
+
+@media (max-width: 768px) {
+    .slds-grid .slds-col {
+        flex-basis: 100%;
+        max-width: 100%;
+    }
+    
+    .document-content-viewer {
+        max-height: 300px;
+    }
+}
+
+@media print {
+    .action-section,
+    .slds-card__footer {
+        display: none;
+    }
+    
+    .document-content-viewer {
+        max-height: none;
+        overflow: visible;
+    }
+} */

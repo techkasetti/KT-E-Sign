@@ -1,35 +1,76 @@
-<template>
-    <!-- Document Generation Analytics -->
-    <lightning-card title="Document Generation Analytics" icon-name="standard:dashboard">
-        
-        <!-- Card Actions -->
-        <div slot="actions">
-            <lightning-button-group>
-                <lightning-button 
-                    variant="neutral" 
-                    label="Refresh" 
-                    icon-name="utility:refresh" 
-                    onclick={handleRefresh} 
-                    disabled={isLoading}>
-                </lightning-button>
-                <lightning-button 
-                    variant="neutral" 
-                    label="Export" 
-                    icon-name="utility:download" 
-                    onclick={handleExport} 
-                    disabled={isLoading}>
-                </lightning-button>
-                <lightning-button 
-                    variant="brand" 
-                    label="Advanced Analytics" 
-                    onclick={handleAdvancedAnalytics}>
-                </lightning-button>
-            </lightning-button-group>
-        </div>
 
+
+<!-- Developer_build_step_by_step_impl_e_sign v1........................................................... -->
+
+<!-- <template>
+    <lightning-card title="E-Signature Analytics Dashboard" icon-name="standard:analytics">
         <div class="slds-card__body slds-card__body_inner">
             
-            <!-- Loading State -->
+            <div class="metrics-grid slds-grid slds-wrap slds-m-bottom_large">
+                <div class="slds-col slds-size_1-of-4 slds-p-around_small">
+                    <div class="metric-card slds-box slds-text-align_center">
+                        <h3 class="metric-number">{totalDocuments}</h3>
+                        <p class="metric-label">Total Documents</p>
+                    </div>
+                </div>
+                <div class="slds-col slds-size_1-of-4 slds-p-around_small">
+                    <div class="metric-card slds-box slds-text-align_center">
+                        <h3 class="metric-number">{pendingSignatures}</h3>
+                        <p class="metric-label">Pending Signatures</p>
+                    </div>
+                </div>
+                <div class="slds-col slds-size_1-of-4 slds-p-around_small">
+                    <div class="metric-card slds-box slds-text-align_center">
+                        <h3 class="metric-number">{completedThisMonth}</h3>
+                        <p class="metric-label">Completed This Month</p>
+                    </div>
+                </div>
+                <div class="slds-col slds-size_1-of-4 slds-p-around_small">
+                    <div class="metric-card slds-box slds-text-align_center">
+                        <h3 class="metric-number">{averageCompletionTime}h</h3>
+                        <p class="metric-label">Avg Completion Time</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="charts-section slds-grid slds-wrap">
+                <div class="slds-col slds-size_1-of-2 slds-p-around_small">
+                    <div class="chart-container slds-box">
+                        <h3 class="slds-text-heading_small slds-m-bottom_medium">Signatures by Region</h3>
+                        <div class="chart-placeholder">
+                            <p class="slds-text-align_center slds-p-around_medium">
+                                Region chart visualization
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-col slds-size_1-of-2 slds-p-around_small">
+                    <div class="chart-container slds-box">
+                        <h3 class="slds-text-heading_small slds-m-bottom_medium">Compliance Status</h3>
+                        <div class="chart-placeholder">
+                            <p class="slds-text-align_center slds-p-around_medium">
+                                Compliance chart visualization
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </lightning-card>
+</template>
+ -->
+
+
+
+<!-- Developer_build_step_by_step_impl_e_sign............................................................  -->
+
+
+
+<!-- <template>
+    <lightning-card title="Document Generation Analytics" icon-name="standard:dashboard">
+        <div class="slds-card__body slds-card__body_inner">
+            
             <template if:true={isLoading}>
                 <div class="slds-text-align_center slds-p-around_large">
                     <lightning-spinner alternative-text="Loading analytics..." size="large"></lightning-spinner>
@@ -37,12 +78,10 @@
                 </div>
             </template>
 
-            <!-- Dashboard Content -->
             <template if:false={isLoading}>
-                
-                <!-- Key Metrics Row -->
+
                 <div class="metrics-row slds-grid slds-wrap slds-gutters_small slds-m-bottom_large">
-                    <!-- Total Documents -->
+
                     <div class="slds-col slds-size_1-of-4">
                         <lightning-card variant="narrow">
                             <div class="metric-card">
@@ -55,7 +94,6 @@
                         </lightning-card>
                     </div>
 
-                    <!-- Compliance Rate -->
                     <div class="slds-col slds-size_1-of-4">
                         <lightning-card variant="narrow">
                             <div class="metric-card">
@@ -66,7 +104,6 @@
                         </lightning-card>
                     </div>
 
-                    <!-- Avg Processing Time -->
                     <div class="slds-col slds-size_1-of-4">
                         <lightning-card variant="narrow">
                             <div class="metric-card">
@@ -77,7 +114,6 @@
                         </lightning-card>
                     </div>
 
-                    <!-- System Uptime -->
                     <div class="slds-col slds-size_1-of-4">
                         <lightning-card variant="narrow">
                             <div class="metric-card">
@@ -89,9 +125,8 @@
                     </div>
                 </div>
 
-                <!-- Charts Row -->
                 <div class="charts-row slds-grid slds-wrap slds-gutters_small slds-m-bottom_large">
-                    <!-- Document Status Breakdown -->
+
                     <div class="slds-col slds-size_1-of-2">
                         <lightning-card title="Document Status Breakdown" icon-name="utility:chart">
                             <div class="chart-container">
@@ -107,7 +142,6 @@
                         </lightning-card>
                     </div>
 
-                    <!-- Compliance Trends -->
                     <div class="slds-col slds-size_1-of-2">
                         <lightning-card title="Compliance Trends" icon-name="utility:trend">
                             <div class="chart-container">
@@ -124,7 +158,6 @@
                     </div>
                 </div>
 
-                <!-- AI Insights -->
                 <template if:true={hasInsights}>
                     <lightning-card title="AI-Powered Insights" icon-name="utility:einstein" class="insights-card">
                         <div class="insights-container">
@@ -135,7 +168,9 @@
                                         <lightning-badge label={insight.severity} variant={insight.severityVariant}></lightning-badge>
                                     </div>
                                     <p class="insight-description slds-m-bottom_small">{insight.description}</p>
-                                    <p class="insight-recommendation"><strong>Recommendation:</strong> {insight.recommendation}</p>
+                                    <p class="insight-recommendation">
+                                        <strong>Recommendation:</strong> {insight.recommendation}
+                                    </p>
                                     <div class="insight-confidence">
                                         <span>Confidence: {insight.confidence}%</span>
                                         <div class="confidence-bar">
@@ -148,10 +183,10 @@
                     </lightning-card>
                 </template>
 
-                <!-- User Activity -->
                 <lightning-card title="User Activity" icon-name="utility:people" class="activity-card">
                     <div class="activity-container">
                         <div class="slds-grid slds-wrap slds-gutters_small">
+
                             <div class="slds-col slds-size_1-of-2">
                                 <h4 class="slds-text-heading_small slds-m-bottom_small">
                                     Active Users: {dashboardData.userActivityMetrics.totalActiveUsers}
@@ -181,11 +216,11 @@
                                     </div>
                                 </template>
                             </div>
+
                         </div>
                     </div>
                 </lightning-card>
 
-                <!-- Performance Benchmarks -->
                 <lightning-card title="Performance Benchmarks" icon-name="utility:metrics" class="performance-card">
                     <div class="benchmark-container">
                         <template if:true={hasOperationMetrics}>
@@ -206,64 +241,31 @@
 
             </template>
         </div>
-    </lightning-card>
 
-    <!-- E-Signature Analytics Dashboard -->
-    <lightning-card title="E-Signature Analytics Dashboard" icon-name="standard:analytics">
-        <div class="slds-card__body slds-card__body_inner">
-            
-            <!-- Key Metrics Cards -->
-            <div class="metrics-grid slds-grid slds-wrap slds-m-bottom_large">
-                <div class="slds-col slds-size_1-of-4 slds-p-around_small">
-                    <div class="metric-card slds-box slds-text-align_center">
-                        <h3 class="metric-number">{totalDocuments}</h3>
-                        <p class="metric-label">Total Documents</p>
-                    </div>
-                </div>
-                <div class="slds-col slds-size_1-of-4 slds-p-around_small">
-                    <div class="metric-card slds-box slds-text-align_center">
-                        <h3 class="metric-number">{pendingSignatures}</h3>
-                        <p class="metric-label">Pending Signatures</p>
-                    </div>
-                </div>
-                <div class="slds-col slds-size_1-of-4 slds-p-around_small">
-                    <div class="metric-card slds-box slds-text-align_center">
-                        <h3 class="metric-number">{completedThisMonth}</h3>
-                        <p class="metric-label">Completed This Month</p>
-                    </div>
-                </div>
-                <div class="slds-col slds-size_1-of-4 slds-p-around_small">
-                    <div class="metric-card slds-box slds-text-align_center">
-                        <h3 class="metric-number">{averageCompletionTime}h</h3>
-                        <p class="metric-label">Avg Completion Time</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Charts Section -->
-            <div class="charts-section slds-grid slds-wrap">
-                <div class="slds-col slds-size_1-of-2 slds-p-around_small">
-                    <div class="chart-container slds-box">
-                        <h3 class="slds-text-heading_small slds-m-bottom_medium">Signatures by Region</h3>
-                        <div class="chart-placeholder">
-                            <p class="slds-text-align_center slds-p-around_medium">
-                                Region chart visualization
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div class="slds-col slds-size_1-of-2 slds-p-around_small">
-                    <div class="chart-container slds-box">
-                        <h3 class="slds-text-heading_small slds-m-bottom_medium">Compliance Status</h3>
-                        <div class="chart-placeholder">
-                            <p class="slds-text-align_center slds-p-around_medium">
-                                Compliance chart visualization
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
+        <div slot="actions">
+            <lightning-button-group>
+                <lightning-button 
+                    variant="neutral" 
+                    label="Refresh" 
+                    icon-name="utility:refresh" 
+                    onclick={handleRefresh} 
+                    disabled={isLoading}>
+                </lightning-button>
+
+                <lightning-button 
+                    variant="neutral" 
+                    label="Export" 
+                    icon-name="utility:download" 
+                    onclick={handleExport} 
+                    disabled={isLoading}>
+                </lightning-button>
+
+                <lightning-button 
+                    variant="brand" 
+                    label="Advanced Analytics" 
+                    onclick={handleAdvancedAnalytics}>
+                </lightning-button>
+            </lightning-button-group>
         </div>
     </lightning-card>
-</template>
+</template> -->
