@@ -1,5 +1,211 @@
 
 
+<!-- Developer_build_step_by_step_impl_e_sign v11 - ---------------------------------------------------->
+
+<!-- <?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+<apiVersion>58.0</apiVersion>
+<isExposed>true</isExposed>
+<targets>
+<target>lightning__RecordPage</target>
+<target>lightning__AppPage</target>
+</targets>
+</LightningComponentBundle> -->
+
+
+ <!-- Developer_build_step_by_step_impl_e_sign v11---------------------------------------------------- -->
+
+<!-- 
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>58.0</apiVersion>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__RecordPage</target>
+        <target>lightning__AppPage</target>
+    </targets>
+</LightningComponentBundle>
+ -->
+
+
+
+<!-- Developer_build_step_by_step_impl_e_sign v10------------------------------------------------------------ -->
+
+
+<!-- 
+<template>
+    <lightning-card title="Document Viewer" icon-name="standard:document">
+        <div class="slds-card__body slds-card__body_inner">
+            <!-- Document Header -->
+            <template if:true={document}>
+                <div class="document-header slds-box slds-m-bottom_medium">
+                    <div class="slds-grid slds-grid_align-spread">
+                        <div class="slds-col">
+                            <h2 class="slds-text-heading_medium">{document.DocumentTitle__c}</h2>
+                            <p class="slds-text-body_small slds-text-color_weak">
+                                Created: {formattedCreatedDate} | Status: {document.Status__c}
+                            </p>
+                        </div>
+                        <div class="slds-col slds-no-flex">
+                            <div class="action-buttons">
+                                <lightning-button 
+                                    label="Download PDF" 
+                                    icon-name="utility:download" 
+                                    onclick={downloadPDF}
+                                    variant="neutral"
+                                    size="small">
+                                </lightning-button>
+                                <template if:true={canRequestSignature}>
+                                    <lightning-button 
+                                        label="Request Signature" 
+                                        icon-name="utility:signature" 
+                                        onclick={requestSignature}
+                                        variant="brand"
+                                        size="small">
+                                    </lightning-button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Document Content -->
+                <div class="document-content-section slds-box slds-m-bottom_medium">
+                    <h3 class="slds-text-heading_small slds-m-bottom_small">Document Content</h3>
+                    <div class="document-content-display">
+                        <div class="content-text">
+                            <lightning-formatted-rich-text value={document.GeneratedClause__c}>
+                            </lightning-formatted-rich-text>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Document Metadata -->
+                <div class="metadata-section slds-box slds-m-bottom_medium">
+                    <h3 class="slds-text-heading_small slds-m-bottom_small">Document Details</h3>
+                    <dl class="slds-list_horizontal slds-wrap">
+                        <dt class="slds-item_label slds-text-color_weak slds-size_1-of-3">Document Type:</dt>
+                        <dd class="slds-item_detail slds-size_2-of-3">{document.ContractType__c}</dd>
+                        
+                        <dt class="slds-item_label slds-text-color_weak slds-size_1-of-3">Region:</dt>
+                        <dd class="slds-item_detail slds-size_2-of-3">{document.Region__c}</dd>
+                        
+                        <dt class="slds-item_label slds-text-color_weak slds-size_1-of-3">Role:</dt>
+                        <dd class="slds-item_detail slds-size_2-of-3">{document.Role__c}</dd>
+                        
+                        <dt class="slds-item_label slds-text-color_weak slds-size_1-of-3">Compliance Score:</dt>
+                        <dd class="slds-item_detail slds-size_2-of-3">
+                            <lightning-badge label={complianceScoreLabel} 
+                                           variant={complianceVariant}>
+                            </lightning-badge>
+                        </dd>
+                        
+                        <dt class="slds-item_label slds-text-color_weak slds-size_1-of-3">Document Hash:</dt>
+                        <dd class="slds-item_detail slds-size_2-of-3 document-hash">{truncatedHash}</dd>
+                    </dl>
+                </div>
+
+                <!-- Signature Requests Section -->
+                <template if:true={hasSignatureRequests}>
+                    <div class="signature-requests-section slds-box">
+                        <h3 class="slds-text-heading_small slds-m-bottom_medium">Signature Requests</h3>
+                        <template for:each={signatureRequests} for:item="request">
+                            <div key={request.Id} class="signature-request-item slds-box slds-m-bottom_small">
+                                <div class="slds-grid slds-grid_align-spread">
+                                    <div class="slds-col">
+                                        <p class="slds-text-body_regular">
+                                            <strong>{request.SignerName__c}</strong>
+                                        </p>
+                                        <p class="slds-text-body_small slds-text-color_weak">
+                                            {request.SignerEmail__c}
+                                        </p>
+                                    </div>
+                                    <div class="slds-col slds-no-flex">
+                                        <div class="status-indicators">
+                                            <div class="status-item">
+                                                <lightning-icon icon-name={getStatusIcon(request.Status__c)} 
+                                                              size="x-small" 
+                                                              variant={getStatusVariant(request.Status__c)}>
+                                                </lightning-icon>
+                                                <span class="slds-m-left_x-small">{request.Status__c}</span>
+                                            </div>
+                                            <div class="status-item">
+                                                <span class="slds-text-body_small slds-text-color_weak">
+                                                    Requested: {getFormattedDate(request.CreatedDate)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <!-- Empty State for No Signature Requests -->
+                <template if:false={hasSignatureRequests}>
+                    <div class="empty-state slds-box slds-text-align_center">
+                        <lightning-icon icon-name="utility:signature" size="large" variant="inverse">
+                        </lightning-icon>
+                        <h3 class="slds-text-heading_small slds-m-top_small">No Signature Requests</h3>
+                        <p class="slds-text-body_small slds-text-color_weak slds-m-top_x-small">
+                            This document has not been sent for signature yet.
+                        </p>
+                    </div>
+                </template>
+            </template>
+
+            <!-- Loading State -->
+            <template if:true={isLoading}>
+                <div class="loading-container slds-text-align_center slds-p-around_large">
+                    <lightning-spinner alternative-text="Loading document..." size="large">
+                    </lightning-spinner>
+                    <p class="slds-m-top_medium">Loading document details...</p>
+                </div>
+            </template>
+
+            <!-- Error State -->
+            <template if:true={hasError}>
+                <div class="error-message slds-text-align_center slds-p-around_large">
+                    <lightning-icon icon-name="utility:error" size="large" variant="error">
+                    </lightning-icon>
+                    <h3 class="slds-text-heading_small slds-m-top_small">Unable to Load Document</h3>
+                    <p class="slds-text-body_small slds-m-top_x-small">{errorMessage}</p>
+                    <lightning-button label="Retry" onclick={retryLoad} variant="brand" class="slds-m-top_medium">
+                    </lightning-button>
+                </div>
+            </template>
+        </div>
+    </lightning-card>
+</template> -->
+
+
+
+
+<!-- Developer_build_step_by_step_impl_e_sign v10------------------------------------------------------------ -->
+
+<!-- <?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>58.0</apiVersion>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__RecordPage</target>
+        <target>lightning__AppPage</target>
+        <target>lightning__HomePage</target>
+        <target>lightningCommunity__Page</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__RecordPage">
+            <objects>
+                <object>Signature_Request__c</object>
+            </objects>
+        </targetConfig>
+    </targetConfigs>
+    <hasConfiguration>true</hasConfiguration>
+    <configurationEditor>c-signaturePadConfig</configurationEditor>
+</LightningComponentBundle> -->
+
+
 
 <!-- Developer_build_step_by_step_impl_e_sign v6......................................................... -->
 

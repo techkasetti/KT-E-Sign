@@ -1,3 +1,87 @@
+/* Developer_build_step_by_step_impl_e_sign v11--------------------------------------------------------- */
+
+
+/* .config-section {
+    background-color: #f8f9fa;
+    border-left: 4px solid #0176d3;
+}
+
+.document-preview {
+    background-color: white;
+    border: 1px solid #dddbda;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.document-header {
+    border-bottom: 1px solid #dddbda;
+    padding-bottom: 1rem;
+}
+
+.document-content {
+    line-height: 1.6;
+}
+
+.compliance-status {
+    text-align: right;
+}
+
+.loading-section {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.slds-modal__container {
+    width: 50%;
+    max-width: 40rem;
+}
+
+@media (max-width: 768px) {
+    .slds-modal__container {
+        width: 90%;
+        margin: 1rem;
+    }
+    
+    .config-section .slds-grid {
+        flex-direction: column;
+    }
+}
+ */
+
+
+
+/* Developer_build_step_by_step_impl_e_sign v10------------------------------------------------------------- */
+
+/* .clause-preview {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.slds-progress-indicator {
+    margin-bottom: 1rem;
+}
+
+.slds-modal {
+    z-index: 9001;
+}
+
+.slds-backdrop {
+    z-index: 9000;
+}
+
+@media (max-width: 768px) {
+    .slds-modal__container {
+        width: 95%;
+        margin: 1rem auto;
+    }
+} */
+
+
+
+
 /* Developer_build_step_by_step_impl_e_sign v6 ..........................................................*/
 
 

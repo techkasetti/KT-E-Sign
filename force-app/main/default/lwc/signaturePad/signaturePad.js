@@ -1,3 +1,793 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Developer_build_step_by_step_impl_e_sign v11 -/----------------------------------------------------
+
+// import createSignatureRequest from '@salesforce/apex/SignatureRequestController.createSignatureRequest';
+// import getAuditTrail from '@salesforce/apex/AuditTrailManager.getAuditTrail';
+
+// export default class DocumentViewer extends LightningElement {
+//     @api recordId;
+//     @track documentData = null;
+//     @track showSignatureModal = false;
+//     @track showAuditModal = false;
+//     @track newSignerEmail = '';
+//     @track newSignerName = '';
+//     @track personalMessage = '';
+//     @track isCreatingRequest = false;
+//     @track auditTrailData = null;
+    
+//     wiredDocumentData;
+
+//     get signatureColumns() {
+//         return [
+//             {
+//                 label: 'Signer Name',
+//                 fieldName: 'SignerName__c',
+//                 type: 'text'
+//             },
+//             {
+//                 label: 'Signer Email',
+//                 fieldName: 'SignerEmail__c',
+//                 type: 'email'
+//             },
+//             {
+//                 label: 'Status',
+//                 fieldName: 'Status__c',
+//                 type: 'text',
+//                 cellAttributes: {
+//                     class: { fieldName: 'statusClass' }
+//                 }
+//             },
+//             {
+//                 label: 'Created Date',
+//                 fieldName: 'CreatedDate',
+//                 type: 'date',
+//                 typeAttributes: {
+//                     year: 'numeric',
+//                     month: '2-digit',
+//                     day: '2-digit'
+//                 }
+//             },
+//             {
+//                 label: 'Completed Date',
+//                 fieldName: 'CompletedDate__c',
+//                 type: 'date',
+//                 typeAttributes: {
+//                     year: 'numeric',
+//                     month: '2-digit',
+//                     day: '2-digit'
+//                 }
+//             },
+//             {
+//                 type: 'action',
+//                 typeAttributes: {
+//                     rowActions: [
+//                         { label: 'View Signature', name: 'view_signature' },
+//                         { label: 'Resend Request', name: 'resend_request' }
+//                     ]
+//                 }
+//             }
+//         ];
+//     }
+
+//     get auditColumns() {
+//         return [
+//             {
+//                 label: 'Action',
+//                 fieldName: 'Action__c',
+//                 type: 'text'
+//             },
+//             {
+//                 label: 'Status',
+//                 fieldName: 'Status__c',
+//                 type: 'text'
+//             },
+//             {
+//                 label: 'Details',
+//                 fieldName: 'Details__c',
+//                 type: 'text',
+//                 wrapText: true
+//             },
+//             {
+//                 label: 'Timestamp',
+//                 fieldName: 'Timestamp__c',
+//                 type: 'date',
+//                 typeAttributes: {
+//                     year: 'numeric',
+//                     month: '2-digit',
+//                     day: '2-digit',
+//                     hour: '2-digit',
+//                     minute: '2-digit'
+//                 }
+//             }
+//         ];
+//     }
+
+//     get signatureRequests() {
+//         if (this.documentData && this.documentData.signatureRequests) {
+//             return this.documentData.signatureRequests.map(request => ({
+//                 ...request,
+//                 statusClass: this.getStatusClass(request.Status__c)
+//             }));
+//         }
+//         return [];
+//     }
+
+//     get hasSignatureRequests() {
+//         return this.signatureRequests && this.signatureRequests.length > 0;
+//     }
+
+//     get complianceVariant() {
+//         if (this.documentData && this.documentData.document) {
+//             const status = this.documentData.document.ComplianceStatus__c;
+//             return status === 'Compliant' ? 'success' : 'warning';
+//         }
+//         return 'inverse';
+//     }
+
+//     @wire(getDocumentData, { documentId: '$recordId' })
+//     wiredGetDocumentData(result) {
+//         this.wiredDocumentData = result;
+//         if (result.data) {
+//             this.documentData = result.data;
+//         } else if (result.error) {
+//             this.showToast('Error', 'Failed to load document data', 'error');
+//             console.error('Wire Error:', result.error);
+//         }
+//     }
+
+//     getStatusClass(status) {
+//         switch (status) {
+//             case 'Completed':
+//             case 'Signed':
+//                 return 'slds-text-color_success';
+//             case 'Pending':
+//                 return 'slds-text-color_default';
+//             case 'Rejected':
+//                 return 'slds-text-color_error';
+//             default:
+//                 return 'slds-text-color_weak';
+//         }
+//     }
+
+//     showSignatureRequestModal() {
+//         this.showSignatureModal = true;
+//     }
+
+//     closeSignatureModal() {
+//         this.showSignatureModal = false;
+//         this.newSignerEmail = '';
+//         this.newSignerName = '';
+//         this.personalMessage = '';
+//     }
+
+//     handleNewSignerEmailChange(event) {
+//         this.newSignerEmail = event.detail.value;
+//     }
+
+//     handleNewSignerNameChange(event) {
+//         this.newSignerName = event.detail.value;
+//     }
+
+//     handlePersonalMessageChange(event) {
+//         this.personalMessage = event.detail.value;
+//     }
+
+//     async createSignatureRequest() {
+//         if (!this.newSignerEmail || !this.newSignerName) {
+//             this.showToast('Error', 'Please enter both signer email and name', 'error');
+//             return;
+//         }
+
+//         this.isCreatingRequest = true;
+//         try {
+//             const result = await createSignatureRequest({
+//                 documentId: this.recordId,
+//                 signerEmail: this.newSignerEmail,
+//                 signerName: this.newSignerName
+//             });
+
+//             if (result.success) {
+// if (result.success) {
+// this.showToast('Success', 'Signature request created successfully', 'success');
+// this.closeSignatureModal();
+// // Refresh the document data to show new signature request
+// return refreshApex(this.wiredDocumentData);
+// } else {
+// this.showToast('Error', result.errorMessage, 'error');
+// }
+// } catch (error) {
+// this.showToast('Error', 'Failed to create signature request', 'error');
+// console.error('Create Signature Request Error:', error);
+// } finally {
+// this.isCreatingRequest = false;
+// }
+// }
+
+// async showAuditTrail() {
+// this.showAuditModal = true;
+// try {
+// const auditData = await getAuditTrail({ 
+// recordId: this.recordId, 
+// limitCount: 50 
+// });
+// this.auditTrailData = auditData;
+// } catch (error) {
+// this.showToast('Error', 'Failed to load audit trail', 'error');
+// console.error('Load Audit Trail Error:', error);
+// }
+// }
+
+// closeAuditModal() {
+// this.showAuditModal = false;
+// this.auditTrailData = null;
+// }
+
+// handleRowAction(event) {
+// const actionName = event.detail.action.name;
+// const row = event.detail.row;
+
+// switch (actionName) {
+// case 'view_signature':
+// this.viewSignature(row.Id);
+// break;
+// case 'resend_request':
+// this.resendRequest(row.Id);
+// break;
+// }
+// }
+
+// viewSignature(requestId) {
+// // Navigate to signature request record
+// window.open(`/lightning/r/Signature_Request__c/${requestId}/view`, '_blank');
+// }
+
+// async resendRequest(requestId) {
+// try {
+// // Logic to resend signature request would go here
+// this.showToast('Info', 'Resend functionality to be implemented', 'info');
+// } catch (error) {
+// this.showToast('Error', 'Failed to resend request', 'error');
+// console.error('Resend Request Error:', error);
+// }
+// }
+
+// async downloadPDF() {
+// try {
+// // PDF download logic would go here
+// this.showToast('Info', 'PDF download functionality to be implemented', 'info');
+// } catch (error) {
+// this.showToast('Error', 'Failed to download PDF', 'error');
+// console.error('Download PDF Error:', error);
+// }
+// }
+
+// showToast(title, message, variant) {
+// const evt = new ShowToastEvent({
+// title: title,
+// message: message,
+// variant: variant
+// });
+// this.dispatchEvent(evt);
+// }
+// }
+
+
+
+
+
+
+
+
+// Developer_build_step_by_step_impl_e_sign v11-------------------------------------------------------
+
+
+// import { LightningElement, api, track, wire } from 'lwc';
+// import { getRecord } from 'lightning/uiRecordApi';
+// import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+// import processSignature from '@salesforce/apex/SignatureRequestController.processSignature';
+
+// const SIGNATURE_REQUEST_FIELDS = [
+//     'Signature_Request__c.Id',
+//     'Signature_Request__c.SignerName__c',
+//     'Signature_Request__c.SignerEmail__c',
+//     'Signature_Request__c.Status__c',
+//     'Signature_Request__c.DocumentId__r.DocumentTitle__c',
+//     'Signature_Request__c.DocumentId__r.ContractType__c',
+//     'Signature_Request__c.DocumentId__r.Region__c',
+//     'Signature_Request__c.DocumentId__r.GeneratedClause__c'
+// ];
+
+// export default class SignaturePad extends LightningElement {
+//     @api recordId;
+    
+//     @track signatureRequest = null;
+//     @track documentContent = '';
+//     @track selectedSignatureMethod = 'type';
+//     @track typedSignature = '';
+//     @track drawnSignatureData = '';
+//     @track uploadedSignatureUrl = '';
+//     @track agreementAccepted = false;
+//     @track isSignatureComplete = false;
+//     @track isProcessing = false;
+    
+//     canvas;
+//     ctx;
+//     drawing = false;
+
+//     get signatureMethodOptions() {
+//         return [
+//             { label: 'Type My Name', value: 'type' },
+//             { label: 'Draw Signature', value: 'draw' },
+//             { label: 'Upload Image', value: 'upload' }
+//         ];
+//     }
+
+//     get isTypedSignature() {
+//         return this.selectedSignatureMethod === 'type';
+//     }
+
+//     get isDrawnSignature() {
+//         return this.selectedSignatureMethod === 'draw';
+//     }
+
+//     get isUploadSignature() {
+//         return this.selectedSignatureMethod === 'upload';
+//     }
+
+//     get isSubmitDisabled() {
+//         if (!this.agreementAccepted || this.isProcessing) {
+//             return true;
+//         }
+
+//         switch (this.selectedSignatureMethod) {
+//             case 'type':
+//                 return !this.typedSignature;
+//             case 'draw':
+//                 return !this.drawnSignatureData;
+//             case 'upload':
+//                 return !this.uploadedSignatureUrl;
+//             default:
+//                 return true;
+//         }
+//     }
+
+//     @wire(getRecord, { recordId: '$recordId', fields: SIGNATURE_REQUEST_FIELDS })
+//     wiredSignatureRequest({ error, data }) {
+//         if (data) {
+//             this.signatureRequest = data;
+//             this.documentContent = data.fields.DocumentId__r.value.fields.GeneratedClause__c.value;
+//         } else if (error) {
+//             this.showToast('Error', 'Failed to load signature request', 'error');
+//             console.error('Wire Error:', error);
+//         }
+//     }
+
+//     renderedCallback() {
+//         if (this.selectedSignatureMethod === 'draw' && !this.canvas) {
+//             this.initializeCanvas();
+//         }
+//     }
+
+//     initializeCanvas() {
+//         this.canvas = this.template.querySelector('.signature-canvas');
+//         if (this.canvas) {
+//             this.ctx = this.canvas.getContext('2d');
+//             this.ctx.strokeStyle = '#000000';
+//             this.ctx.lineWidth = 2;
+//             this.ctx.lineCap = 'round';
+            
+//             // Mouse events
+//             this.canvas.addEventListener('mousedown', this.startDrawing.bind(this));
+//             this.canvas.addEventListener('mousemove', this.draw.bind(this));
+//             this.canvas.addEventListener('mouseup', this.stopDrawing.bind(this));
+            
+//             // Touch events for mobile
+//             this.canvas.addEventListener('touchstart', this.handleTouch.bind(this));
+//             this.canvas.addEventListener('touchmove', this.handleTouch.bind(this));
+//             this.canvas.addEventListener('touchend', this.stopDrawing.bind(this));
+//         }
+//     }
+
+//     handleSignatureMethodChange(event) {
+//         this.selectedSignatureMethod = event.detail.value;
+//         this.resetSignatureData();
+//     }
+
+//     handleTypedSignatureChange(event) {
+//         this.typedSignature = event.detail.value;
+//     }
+
+//     handleAgreementChange(event) {
+//         this.agreementAccepted = event.detail.checked;
+//     }
+
+//     handleUploadFinished(event) {
+//         const uploadedFiles = event.detail.files;
+//         if (uploadedFiles.length > 0) {
+//             this.uploadedSignatureUrl = '/sfc/servlet.shepherd/document/download/' + uploadedFiles[0].documentId;
+//             this.showToast('Success', 'Signature image uploaded successfully', 'success');
+//         }
+//     }
+
+//     startDrawing(event) {
+//         this.drawing = true;
+//         const rect = this.canvas.getBoundingClientRect();
+//         this.ctx.beginPath();
+//         this.ctx.moveTo(event.clientX - rect.left, event.clientY - rect.top);
+//     }
+
+//     draw(event) {
+//         if (!this.drawing) return;
+//         const rect = this.canvas.getBoundingClientRect();
+//         this.ctx.lineTo(event.clientX - rect.left, event.clientY - rect.top);
+//         this.ctx.stroke();
+//         this.updateDrawnSignatureData();
+//     }
+
+//     stopDrawing() {
+//         this.drawing = false;
+//         this.ctx.beginPath();
+//     }
+
+//     handleTouch(event) {
+//         event.preventDefault();
+//         const touch = event.touches[0];
+//         const mouseEvent = new MouseEvent(event.type.replace('touch', 'mouse'), {
+//             clientX: touch.clientX,
+//             clientY: touch.clientY
+//         });
+//         this.canvas.dispatchEvent(mouseEvent);
+//     }
+
+//     clearCanvas() {
+//         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+//         this.drawnSignatureData = '';
+//     }
+
+//     updateDrawnSignatureData() {
+//         this.drawnSignatureData = this.canvas.toDataURL();
+//     }
+
+//     resetSignatureData() {
+//         this.typedSignature = '';
+//         this.drawnSignatureData = '';
+//         this.uploadedSignatureUrl = '';
+//         if (this.canvas) {
+//             this.clearCanvas();
+//         }
+//     }
+
+//     async submitSignature() {
+//         this.isProcessing = true;
+
+//         try {
+//             let signatureData = '';
+//             let signatureMethod = this.selectedSignatureMethod;
+
+//             switch (this.selectedSignatureMethod) {
+//                 case 'type':
+//                     signatureData = this.typedSignature;
+//                     break;
+//                 case 'draw':
+//                     signatureData = this.drawnSignatureData;
+//                     break;
+//                 case 'upload':
+//                     signatureData = this.uploadedSignatureUrl;
+//                     break;
+//             }
+
+//             const result = await processSignature({
+//                 signatureRequestId: this.recordId,
+//                 signatureData: signatureData,
+//                 signatureMethod: signatureMethod
+//             });
+
+//             if (result.success) {
+//                 this.isSignatureComplete = true;
+//                 this.showToast('Success', 'Signature submitted successfully', 'success');
+//             } else {
+//                 this.showToast('Error', result.errorMessage, 'error');
+//             }
+
+//         } catch (error) {
+//             this.showToast('Error', 'An error occurred while submitting signature', 'error');
+//             console.error('Submit Signature Error:', error);
+//         } finally {
+//             this.isProcessing = false;
+//         }
+//     }
+
+//     showToast(title, message, variant) {
+//         const evt = new ShowToastEvent({
+//             title: title,
+//             message: message,
+//             variant: variant
+//         });
+//         this.dispatchEvent(evt);
+//     }
+// }
+
+
+
+
+// Developer_build_step_by_step_impl_e_sign v10------------------------------------------------------------
+
+// import { LightningElement, api, track, wire } from 'lwc';
+// import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+// import getSignatureRequest from '@salesforce/apex/SignatureRequestController.getSignatureRequest';
+// import submitSignature from '@salesforce/apex/SignatureRequestController.submitSignature';
+
+// export default class SignaturePad extends LightningElement {
+//     @api recordId; // Signature Request ID
+    
+//     @track signatureRequest = null;
+//     @track isLoading = true;
+//     @track hasError = false;
+//     @track errorMessage = '';
+//     @track isSignatureComplete = false;
+    
+//     // Signature method states
+//     @track selectedSignatureMethod = 'typed';
+//     @track typedSignature = '';
+//     @track canvasSignature = '';
+//     @track uploadedSignatureUrl = '';
+//     @track agreementAccepted = false;
+    
+//     // Canvas drawing states
+//     isDrawing = false;
+//     lastX = 0;
+//     lastY = 0;
+//     canvasContext = null;
+
+//     // Wire the signature request data
+//     @wire(getSignatureRequest, { requestId: '$recordId' })
+//     wiredSignatureRequest({ error, data }) {
+//         this.isLoading = false;
+//         if (data) {
+//             this.signatureRequest = data;
+//             this.hasError = false;
+//         } else if (error) {
+//             this.hasError = true;
+//             this.errorMessage = error.body ? error.body.message : 'Unknown error occurred';
+//             this.showToast('Error', 'Failed to load signature request: ' + this.errorMessage, 'error');
+//         }
+//     }
+
+//     // Computed properties
+//     get signatureMethodOptions() {
+//         return [
+//             { label: 'Type My Name', value: 'typed' },
+//             { label: 'Draw Signature', value: 'canvas' },
+//             { label: 'Upload Image', value: 'upload' }
+//         ];
+//     }
+
+//     get isTypedSignature() {
+//         return this.selectedSignatureMethod === 'typed';
+//     }
+
+//     get isCanvasSignature() {
+//         return this.selectedSignatureMethod === 'canvas';
+//     }
+
+//     get isUploadSignature() {
+//         return this.selectedSignatureMethod === 'upload';
+//     }
+
+//     get isSubmitDisabled() {
+//         if (!this.agreementAccepted) return true;
+        
+//         switch (this.selectedSignatureMethod) {
+//             case 'typed':
+//                 return !this.typedSignature || this.typedSignature.trim().length < 2;
+//             case 'canvas':
+//                 return !this.hasCanvasSignature();
+//             case 'upload':
+//                 return !this.uploadedSignatureUrl;
+//             default:
+//                 return true;
+//         }
+//     }
+
+//     // Event handlers
+//     handleSignatureMethodChange(event) {
+//         this.selectedSignatureMethod = event.detail.value;
+//         // Clear previous signatures when method changes
+//         this.clearCurrentSignature();
+//     }
+
+//     handleTypedSignatureChange(event) {
+//         this.typedSignature = event.target.value;
+//     }
+
+//     handleAgreementChange(event) {
+//         this.agreementAccepted = event.target.checked;
+//     }
+
+//     handleUploadFinished(event) {
+//         const uploadedFiles = event.detail.files;
+//         if (uploadedFiles.length > 0) {
+//             // In a real implementation, you would get the actual file URL
+//             this.uploadedSignatureUrl = '/sfc/servlet.shepherd/version/download/' + uploadedFiles[0].documentId;
+//             this.showToast('Success', 'Signature image uploaded successfully', 'success');
+//         }
+//     }
+
+//     // Canvas methods
+//     renderedCallback() {
+//         if (this.isCanvasSignature && !this.canvasInitialized) {
+//             this.initializeCanvas();
+//             this.canvasInitialized = true;
+//         }
+//     }
+
+//     initializeCanvas() {
+//         const canvas = this.template.querySelector('.signature-canvas');
+//         if (canvas) {
+//             this.canvasContext = canvas.getContext('2d');
+//             this.canvasContext.strokeStyle = '#000000';
+//             this.canvasContext.lineWidth = 2;
+//             this.canvasContext.lineCap = 'round';
+//             this.canvasContext.lineJoin = 'round';
+//         }
+//     }
+
+//     startDrawing(event) {
+//         this.isDrawing = true;
+//         const rect = event.target.getBoundingClientRect();
+        
+//         if (event.type === 'touchstart') {
+//             const touch = event.touches[0];
+//             this.lastX = touch.clientX - rect.left;
+//             this.lastY = touch.clientY - rect.top;
+//         } else {
+//             this.lastX = event.clientX - rect.left;
+//             this.lastY = event.clientY - rect.top;
+//         }
+        
+//         event.preventDefault();
+//     }
+
+//     draw(event) {
+//         if (!this.isDrawing) return;
+        
+//         const rect = event.target.getBoundingClientRect();
+//         let currentX, currentY;
+        
+//         if (event.type === 'touchmove') {
+//             const touch = event.touches[0];
+//             currentX = touch.clientX - rect.left;
+//             currentY = touch.clientY - rect.top;
+//         } else {
+//             currentX = event.clientX - rect.left;
+//             currentY = event.clientY - rect.top;
+//         }
+        
+//         this.canvasContext.beginPath();
+//         this.canvasContext.moveTo(this.lastX, this.lastY);
+//         this.canvasContext.lineTo(currentX, currentY);
+//         this.canvasContext.stroke();
+        
+//         this.lastX = currentX;
+//         this.lastY = currentY;
+        
+//         event.preventDefault();
+//     }
+
+//     stopDrawing() {
+//         this.isDrawing = false;
+//     }
+
+//     clearCanvas() {
+//         const canvas = this.template.querySelector('.signature-canvas');
+//         if (canvas && this.canvasContext) {
+//             this.canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+//         }
+//     }
+
+//     hasCanvasSignature() {
+//         const canvas = this.template.querySelector('.signature-canvas');
+//         if (!canvas) return false;
+        
+//         const imageData = this.canvasContext.getImageData(0, 0, canvas.width, canvas.height);
+//         // Check if any pixel has been drawn (not transparent)
+//         for (let i = 3; i < imageData.data.length; i += 4) {
+//             if (imageData.data[i] !== 0) {
+//                 return true;
+//             }
+//         }
+//         return false;
+//     }
+
+//     getCanvasSignatureData() {
+//         const canvas = this.template.querySelector('.signature-canvas');
+//         return canvas ? canvas.toDataURL() : '';
+//     }
+
+//     clearCurrentSignature() {
+//         this.typedSignature = '';
+//         this.uploadedSignatureUrl = '';
+//         if (this.isCanvasSignature) {
+//             this.clearCanvas();
+//         }
+//     }
+
+//     // Submit signature
+//     async handleSubmitSignature() {
+//         try {
+//             let signatureData = '';
+//             let signatureType = '';
+
+//             switch (this.selectedSignatureMethod) {
+//                 case 'typed':
+//                     signatureData = this.typedSignature;
+//                     signatureType = 'Typed';
+//                     break;
+//                 case 'canvas':
+//                     signatureData = this.getCanvasSignatureData();
+//                     signatureType = 'Drawn';
+//                     break;
+//                 case 'upload':
+//                     signatureData = this.uploadedSignatureUrl;
+//                     signatureType = 'Uploaded';
+//                     break;
+//             }
+
+//             await submitSignature({
+//                 requestId: this.recordId,
+//                 signatureData: signatureData,
+//                 signatureMethod: signatureType
+//             });
+
+//             this.isSignatureComplete = true;
+//             this.showToast('Success', 'Signature submitted successfully!', 'success');
+
+//         } catch (error) {
+//             this.showToast('Error', 'Failed to submit signature: ' + error.body.message, 'error');
+//         }
+//     }
+
+//     handleCancel() {
+//         // Navigate away or close modal
+//         this.dispatchEvent(new CustomEvent('cancel'));
+//     }
+
+//     handleClose() {
+//         // Navigate away or close modal
+//         this.dispatchEvent(new CustomEvent('close'));
+//     }
+
+//     retryLoad() {
+//         this.isLoading = true;
+//         this.hasError = false;
+//         // The wire will automatically retry
+//     }
+
+//     showToast(title, message, variant) {
+//         const evt = new ShowToastEvent({
+//             title: title,
+//             message: message,
+//             variant: variant
+//         });
+//         this.dispatchEvent(evt);
+//     }
+// }
+
+
+
+
 // Developer_build_step_by_step_impl_e_sign v6.............................................................
 
 

@@ -1,6 +1,399 @@
+// Developer_build_step_by_step_impl_e_sign v11-----------------------------------------------------------
+
+// import { LightningElement, track } from 'lwc';
+// import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+// import generateDocument from '@salesforce/apex/DocumentLifecycleDeploymentManager.generateDocument';
+// import createSignatureRequest from '@salesforce/apex/SignatureRequestController.createSignatureRequest';
+
+// export default class DocumentGenerator extends LightningElement {
+//     @track selectedRegion = '';
+//     @track selectedRole = '';
+//     @track selectedContractType = '';
+//     @track documentTitle = '';
+//     @track generatedDocument = null;
+//     @track generatedClause = '';
+//     @track complianceStatus = '';
+//     @track isGenerating = false;
+//     @track showModal = false;
+//     @track signerEmail = '';
+//     @track signerName = '';
+//     @track isProcessing = false;
+
+//     get regionOptions() {
+//         return [
+//             { label: 'United States', value: 'US' },
+//             { label: 'European Union', value: 'EU' },
+//             { label: 'Asia Pacific', value: 'APAC' },
+//             { label: 'Global', value: 'Global' }
+//         ];
+//     }
+
+//     get roleOptions() {
+//         return [
+//             { label: 'Manager', value: 'Manager' },
+//             { label: 'Director', value: 'Director' },
+//             { label: 'Vice President', value: 'VP' },
+//             { label: 'C-Level Executive', value: 'C-Level' },
+//             { label: 'Employee', value: 'Employee' }
+//         ];
+//     }
+
+//     get contractTypeOptions() {
+//         return [
+//             { label: 'Employment Agreement', value: 'Employment' },
+//             { label: 'Non-Disclosure Agreement', value: 'NDA' },
+//             { label: 'Service Agreement', value: 'Service Agreement' },
+//             { label: 'Partnership Agreement', value: 'Partnership' }
+//         ];
+//     }
+
+//     get complianceVariant() {
+//         return this.complianceStatus === 'Compliant' ? 'success' : 'warning';
+//     }
+
+//     get isFormValid() {
+//         return this.selectedRegion && this.selectedRole && this.selectedContractType && this.documentTitle;
+//     }
+
+//     handleRegionChange(event) {
+//         this.selectedRegion = event.detail.value;
+//     }
+
+//     handleRoleChange(event) {
+//         this.selectedRole = event.detail.value;
+//     }
+
+//     handleContractTypeChange(event) {
+//         this.selectedContractType = event.detail.value;
+//     }
+
+//     handleTitleChange(event) {
+//         this.documentTitle = event.detail.value;
+//     }
+
+//     async generateDocument() {
+//         if (!this.isFormValid) {
+//             this.showToast('Error', 'Please fill in all required fields', 'error');
+//             return;
+//         }
+
+//         this.isGenerating = true;
+//         try {
+//             const result = await generateDocument({
+//                 region: this.selectedRegion,
+//                 role: this.selectedRole,
+//                 contractType: this.selectedContractType,
+//                 documentTitle: this.documentTitle
+//             });
+
+//             if (result.success) {
+//                 this.generatedDocument = result;
+//                 this.generatedClause = result.generatedClause;
+//                 this.complianceStatus = result.complianceStatus;
+//                 this.showToast('Success', 'Document generated successfully', 'success');
+//             } else {
+//                 this.showToast('Error', result.errorMessage, 'error');
+//             }
+//         } catch (error) {
+//             this.showToast('Error', 'An error occurred while generating the document', 'error');
+//             console.error('Generate Document Error:', error);
+//         } finally {
+//             this.isGenerating = false;
+//         }
+//     }
+
+//     showSignatureRequest() {
+//         this.showModal = true;
+//     }
+
+//     closeModal() {
+//         this.showModal = false;
+//         this.signerEmail = '';
+//         this.signerName = '';
+//     }
+
+//     handleSignerEmailChange(event) {
+//         this.signerEmail = event.detail.value;
+//     }
+
+//     handleSignerNameChange(event) {
+//         this.signerName = event.detail.value;
+//     }
+
+//     async sendSignatureRequest() {
+//         if (!this.signerEmail || !this.signerName) {
+//             this.showToast('Error', 'Please enter signer email and name', 'error');
+//             return;
+//         }
+
+//         this.isProcessing = true;
+//         try {
+//             const result = await createSignatureRequest({
+//                 documentId: this.generatedDocument.documentId,
+//                 signerEmail: this.signerEmail,
+//                 signerName: this.signerName
+//             });
+
+//             if (result.success) {
+//                 this.showToast('Success', 'Signature request sent successfully', 'success');
+//                 this.closeModal();
+//             } else {
+//                 this.showToast('Error', result.errorMessage, 'error');
+//             }
+//         } catch (error) {
+//             this.showToast('Error', 'An error occurred while sending signature request', 'error');
+//             console.error('Send Signature Request Error:', error);
+//         } finally {
+//             this.isProcessing = false;
+//         }
+//     }
+
+//     showToast(title, message, variant) {
+//         const evt = new ShowToastEvent({
+//             title: title,
+//             message: message,
+//             variant: variant
+//         });
+//         this.dispatchEvent(evt);
+//     }
+// }
 
 
 
+
+//  Developer_build_step_by_step_impl_e_sign v10------------------------------------------------------------
+
+
+// import { LightningElement, track } from 'lwc';
+// import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+// import generateDocument from '@salesforce/apex/DocumentLifecycleDeploymentManager.generateDocument';
+// import validateCompliance from '@salesforce/apex/ComplianceChecker.validateCompliance';
+// import initiateSignatureRequest from '@salesforce/apex/SignatureRequestController.initiateSignatureRequest';
+// import generateClause from '@salesforce/apex/ClauseGenerator.generateClause';
+
+// export default class DocumentGenerator extends LightningElement {
+//     @track currentStep = 'step1';
+//     @track region = '';
+//     @track role = '';
+//     @track contractType = '';
+//     @track documentTitle = '';
+//     @track notes = '';
+//     @track previewClause = '';
+//     @track complianceResult = null;
+//     @track complianceScore = 0;
+//     @track complianceStatus = '';
+//     @track violations = [];
+//     @track recommendations = [];
+//     @track documentGenerated = false;
+//     @track generatedDocumentId = '';
+//     @track isGenerating = false;
+//     @track showSignatureModal = false;
+//     @track signerEmail = '';
+//     @track signerName = '';
+//     @track signatureMessage = '';
+
+//     // Dropdown options
+//     get regionOptions() {
+//         return [
+//             { label: 'United States', value: 'US' },
+//             { label: 'European Union', value: 'EU' },
+//             { label: 'Asia Pacific', value: 'APAC' },
+//             { label: 'Global', value: 'Global' }
+//         ];
+//     }
+
+//     get roleOptions() {
+//         return [
+//             { label: 'Manager', value: 'Manager' },
+//             { label: 'Director', value: 'Director' },
+//             { label: 'Vice President', value: 'VP' },
+//             { label: 'C-Level Executive', value: 'C-Level' },
+//             { label: 'Employee', value: 'Employee' }
+//         ];
+//     }
+
+//     get contractTypeOptions() {
+//         return [
+//             { label: 'Employment Agreement', value: 'Employment' },
+//             { label: 'Non-Disclosure Agreement', value: 'NDA' },
+//             { label: 'Service Agreement', value: 'Service Agreement' },
+//             { label: 'Partnership Agreement', value: 'Partnership' }
+//         ];
+//     }
+
+//     // Step visibility computed properties
+//     get isStep1() { return this.currentStep === 'step1'; }
+//     get isStep2() { return this.currentStep === 'step2'; }
+//     get isStep3() { return this.currentStep === 'step3'; }
+//     get isStep4() { return this.currentStep === 'step4'; }
+//     get isFirstStep() { return this.currentStep === 'step1'; }
+//     get isLastStep() { return this.currentStep === 'step4'; }
+
+//     // Validation computed properties
+//     get isNextDisabled() {
+//         if (this.currentStep === 'step1') {
+//             return !this.region || !this.role || !this.contractType || !this.documentTitle;
+//         }
+//         if (this.currentStep === 'step2') {
+//             return !this.previewClause;
+//         }
+//         if (this.currentStep === 'step3') {
+//             return !this.complianceResult || this.complianceScore < 75;
+//         }
+//         return false;
+//     }
+
+//     get isCompleteDisabled() {
+//         return !this.documentGenerated;
+//     }
+
+//     get isSendDisabled() {
+//         return !this.signerEmail || !this.signerName;
+//     }
+
+//     // Compliance display properties
+//     get complianceBoxClass() {
+//         if (this.complianceScore >= 75) {
+//             return 'slds-box slds-theme_success';
+//         }
+//         return 'slds-box slds-theme_warning';
+//     }
+
+//     get hasViolations() {
+//         return this.violations && this.violations.length > 0;
+//     }
+
+//     get hasRecommendations() {
+//         return this.recommendations && this.recommendations.length > 0;
+//     }
+
+//     // Event handlers
+//     handleInputChange(event) {
+//         const field = event.target.name;
+//         const value = event.target.value;
+//         this[field] = value;
+//     }
+
+//     handleNext() {
+//         const stepOrder = ['step1', 'step2', 'step3', 'step4'];
+//         const currentIndex = stepOrder.indexOf(this.currentStep);
+//         if (currentIndex < stepOrder.length - 1) {
+//             this.currentStep = stepOrder[currentIndex + 1];
+//         }
+//     }
+
+//     handlePrevious() {
+//         const stepOrder = ['step1', 'step2', 'step3', 'step4'];
+//         const currentIndex = stepOrder.indexOf(this.currentStep);
+//         if (currentIndex > 0) {
+//             this.currentStep = stepOrder[currentIndex - 1];
+//         }
+//     }
+
+//     async generatePreviewClause() {
+//         if (!this.region || !this.role || !this.contractType) {
+//             this.showToast('Error', 'Please select all required fields', 'error');
+//             return;
+//         }
+
+//         try {
+//             this.previewClause = await generateClause({
+//                 region: this.region,
+//                 role: this.role,
+//                 contractType: this.contractType
+//             });
+//             this.showToast('Success', 'Preview clause generated successfully', 'success');
+//         } catch (error) {
+//             this.showToast('Error', 'Failed to generate preview: ' + error.body.message, 'error');
+//         }
+//     }
+
+//     async performComplianceCheck() {
+//         if (!this.previewClause) {
+//             this.showToast('Error', 'Please generate preview clause first', 'error');
+//             return;
+//         }
+
+//         try {
+//             this.complianceResult = await validateCompliance({
+//                 clause: this.previewClause,
+//                 region: this.region,
+//                 contractType: this.contractType
+//             });
+            
+//             this.complianceScore = this.complianceResult.complianceScore;
+//             this.complianceStatus = this.complianceResult.isCompliant ? 'Compliant' : 'Requires Review';
+//             this.violations = this.complianceResult.violations || [];
+//             this.recommendations = this.complianceResult.recommendations || [];
+            
+//             const variant = this.complianceResult.isCompliant ? 'success' : 'warning';
+//             this.showToast('Compliance Check Complete', 
+//                           'Compliance score: ' + this.complianceScore + '%', 
+//                           variant);
+//         } catch (error) {
+//             this.showToast('Error', 'Compliance check failed: ' + error.body.message, 'error');
+//         }
+//     }
+
+//     async handleGenerateDocument() {
+//         this.isGenerating = true;
+        
+//         try {
+//             this.generatedDocumentId = await generateDocument({
+//                 region: this.region,
+//                 role: this.role,
+//                 contractType: this.contractType,
+//                 documentTitle: this.documentTitle
+//             });
+            
+//             this.documentGenerated = true;
+//             this.showToast('Success', 'Document generated successfully!', 'success');
+//         } catch (error) {
+//             this.showToast('Error', 'Failed to generate document: ' + error.body.message, 'error');
+//         } finally {
+//             this.isGenerating = false;
+//         }
+//     }
+
+//     openSignatureRequestModal() {
+//         this.showSignatureModal = true;
+//     }
+
+//     closeSignatureModal() {
+//         this.showSignatureModal = false;
+//         this.signerEmail = '';
+//         this.signerName = '';
+//         this.signatureMessage = '';
+//     }
+
+//     async sendSignatureRequest() {
+//         try {
+//             await initiateSignatureRequest({
+//                 documentId: this.generatedDocumentId,
+//                 signerEmail: this.signerEmail,
+//                 signerName: this.signerName
+//             });
+            
+//             this.showToast('Success', 'Signature request sent successfully!', 'success');
+//             this.closeSignatureModal();
+//         } catch (error) {
+//             this.showToast('Error', 'Failed to send signature request: ' + error.body.message, 'error');
+//         }
+//     }
+
+//     handleComplete() {
+//         this.showToast('Complete', 'Document generation workflow completed!', 'success');
+//     }
+
+//     showToast(title, message, variant) {
+//         const evt = new ShowToastEvent({
+//             title: title,
+//             message: message,
+//             variant: variant
+//         });
+//         this.dispatchEvent(evt);
+//     }
+// }
 
 
 

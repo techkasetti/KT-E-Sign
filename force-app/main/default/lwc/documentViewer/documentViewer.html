@@ -1,4 +1,197 @@
 
+<!-- Developer_build_step_by_step_impl_e_sign v11 ------------------------------------------------------->
+
+<!-- <template>
+    <lightning-card title="Document Management" icon-name="standard:document">
+        <div class="slds-card__body slds-card__body_inner">
+            
+            <div class="document-metadata slds-box slds-m-bottom_medium">
+                <h3 class="slds-text-heading_small slds-m-bottom_small">Document Information</h3>
+                <template if:true={documentData}>
+                    <dl class="slds-list_horizontal slds-wrap">
+                        <dt class="slds-item_label slds-text-color_weak">Title:</dt>
+                        <dd class="slds-item_detail">{documentData.document.DocumentTitle__c}</dd>
+                        <dt class="slds-item_label slds-text-color_weak">Type:</dt>
+                        <dd class="slds-item_detail">{documentData.document.ContractType__c}</dd>
+                        <dt class="slds-item_label slds-text-color_weak">Region:</dt>
+                        <dd class="slds-item_detail">{documentData.document.Region__c}</dd>
+                        <dt class="slds-item_label slds-text-color_weak">Role:</dt>
+                        <dd class="slds-item_detail">{documentData.document.Role__c}</dd>
+                        <dt class="slds-item_label slds-text-color_weak">Status:</dt>
+                        <dd class="slds-item_detail">
+                            <lightning-badge 
+                                label={documentData.document.ComplianceStatus__c} 
+                                variant={complianceVariant}>
+                            </lightning-badge>
+                        </dd>
+                    </dl>
+                </template>
+            </div>
+
+            <div class="document-content-section slds-box slds-m-bottom_medium">
+                <div class="slds-grid slds-gutters">
+                    <div class="slds-col slds-size_3-of-4">
+                        <h3 class="slds-text-heading_small slds-m-bottom_small">Document Content</h3>
+                    </div>
+                    <div class="slds-col slds-size_1-of-4">
+                        <div class="content-actions">
+                            <lightning-button-menu 
+                                alternative-text="Document Actions" 
+                                variant="border-filled"
+                                menu-alignment="right">
+                                <lightning-menu-item 
+                                    value="requestSignature" 
+                                    label="Request Signature"
+                                    onclick={showSignatureRequestModal}>
+                                </lightning-menu-item>
+                                <lightning-menu-item 
+                                    value="downloadPDF" 
+                                    label="Download PDF"
+                                    onclick={downloadPDF}>
+                                </lightning-menu-item>
+                                <lightning-menu-item 
+                                    value="viewAudit" 
+                                    label="View Audit Trail"
+                                    onclick={showAuditTrail}>
+                                </lightning-menu-item>
+                            </lightning-button-menu>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="document-display slds-m-top_small">
+                    <template if:true={documentData}>
+                        <div class="content-text">
+                            <lightning-formatted-rich-text 
+                                value={documentData.document.GeneratedClause__c}>
+                            </lightning-formatted-rich-text>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <div class="signature-requests-section slds-box">
+                <h3 class="slds-text-heading_small slds-m-bottom_medium">Signature Requests</h3>
+                
+                <template if:true={hasSignatureRequests}>
+                    <lightning-datatable
+                        key-field="Id"
+                        data={signatureRequests}
+                        columns={signatureColumns}
+                        onrowaction={handleRowAction}
+                        hide-checkbox-column="true">
+                    </lightning-datatable>
+                </template>
+                
+                <template if:false={hasSignatureRequests}>
+                    <div class="no-requests slds-text-align_center slds-p-around_medium">
+                        <lightning-icon 
+                            icon-name="utility:info" 
+                            variant="inverse" 
+                            size="small"
+                            class="slds-m-right_small">
+                        </lightning-icon>
+                        <span class="slds-text-color_weak">No signature requests found for this document</span>
+                    </div>
+                </template>
+            </div>
+
+        </div>
+    </lightning-card>
+
+    <template if:true={showSignatureModal}>
+        <section role="dialog" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <h2 class="slds-text-heading_medium">Create Signature Request</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <div class="slds-form slds-form_stacked">
+                        <lightning-input 
+                            type="email" 
+                            name="signerEmail" 
+                            label="Signer Email"
+                            value={newSignerEmail} 
+                            onchange={handleNewSignerEmailChange} 
+                            required>
+                        </lightning-input>
+                        <lightning-input 
+                            type="text" 
+                            name="signerName" 
+                            label="Signer Name"
+                            value={newSignerName} 
+                            onchange={handleNewSignerNameChange}
+                            class="slds-m-top_medium" 
+                            required>
+                        </lightning-input>
+                        <lightning-textarea
+                            name="message"
+                            label="Personal Message (Optional)"
+                            value={personalMessage}
+                            onchange={handlePersonalMessageChange}
+                            class="slds-m-top_medium"
+                            placeholder="Add a personal message for the signer">
+                        </lightning-textarea>
+                    </div>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button 
+                        label="Cancel" 
+                        onclick={closeSignatureModal}>
+                    </lightning-button>
+                    <lightning-button 
+                        label="Send Request" 
+                        variant="brand" 
+                        onclick={createSignatureRequest}
+                        disabled={isCreatingRequest}>
+                    </lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+    <template if:true={showAuditModal}>
+        <section role="dialog" class="slds-modal slds-fade-in-open slds-modal_large">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <h2 class="slds-text-heading_medium">Document Audit Trail</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <template if:true={auditTrailData}>
+                        <lightning-datatable
+                            key-field="Id"
+                            data={auditTrailData}
+                            columns={auditColumns}
+                            hide-checkbox-column="true">
+                        </lightning-datatable>
+                    </template>
+                    <template if:false={auditTrailData}>
+                        <div class="slds-text-align_center slds-p-around_large">
+                            <lightning-spinner 
+                                alternative-text="Loading audit trail..." 
+                                size="medium">
+                            </lightning-spinner>
+                        </div>
+                    </template>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button 
+                        label="Close" 
+                        onclick={closeAuditModal}>
+                    </lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+</template> -->
+
+
+
+
+
 <!-- Developer_build_step_by_step_impl_e_sign v6 .........................................................-->
 
 

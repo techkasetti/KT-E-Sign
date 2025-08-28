@@ -1,0 +1,93 @@
+/* Developer_build_step_by_step_impl_e_sign v11 - ----------------------------------------------------------*/
+
+
+/* .metrics-section {
+  margin-bottom: 2rem;
+}
+
+.metric-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: none;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.metric-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.metric-label {
+  font-size: 0.875rem;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.charts-section .slds-card {
+  height: 100%;
+}
+
+.chart-container {
+  position: relative;
+  height: 300px;
+  padding: 1rem;
+}
+
+.trends-chart {
+  height: 400px !important;
+}
+
+.analytics-chart {
+  max-width: 100%;
+  height: 100%;
+}
+
+.health-status {
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.health-metric {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .metrics-section .slds-col {
+    flex-basis: 50%;
+    max-width: 50%;
+  }
+
+  .chart-container {
+    height: 250px;
+    padding: 0.5rem;
+  }
+
+  .metric-card {
+    padding: 1rem;
+  }
+
+  .metric-value {
+    font-size: 1.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .metrics-section .slds-col {
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+} */

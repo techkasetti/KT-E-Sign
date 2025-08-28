@@ -1,0 +1,124 @@
+
+
+<!-- Developer_build_step_by_step_impl_e_sign v11 ------------------------------------------------------- -->
+
+<!-- <template>
+    <lightning-card title="E-Signature Analytics Dashboard" icon-name="standard:dashboard">
+        <div class="slds-card__body slds-card__body_inner">
+            
+            <div class="slds-grid slds-gutters slds-wrap metrics-section">
+                <div class="slds-col slds-size_1-of-4">
+                    <div class="metric-card slds-box slds-text-align_center">
+                        <div class="metric-value">{totalRequests}</div>
+                        <div class="metric-label">Total Requests</div>
+                    </div>
+                </div>
+                <div class="slds-col slds-size_1-of-4">
+                    <div class="metric-card slds-box slds-text-align_center">
+                        <div class="metric-value">{completionRate}%</div>
+                        <div class="metric-label">Completion Rate</div>
+                    </div>
+                </div>
+                <div class="slds-col slds-size_1-of-4">
+                    <div class="metric-card slds-box slds-text-align_center">
+                        <div class="metric-value">{avgCompletionTime}</div>
+                        <div class="metric-label">Avg. Completion Time</div>
+                    </div>
+                </div>
+                <div class="slds-col slds-size_1-of-4">
+                    <div class="metric-card slds-box slds-text-align_center">
+                        <div class="metric-value">{activeUsers}</div>
+                        <div class="metric-label">Active Users</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="slds-grid slds-gutters slds-wrap charts-section slds-m-top_large">
+                
+                <div class="slds-col slds-size_1-of-2">
+                    <lightning-card title="Request Status Distribution">
+                        <div class="chart-container">
+                            <canvas lwc:ref="statusChart" class="analytics-chart"></canvas>
+                        </div>
+                    </lightning-card>
+                </div>
+                
+                <div class="slds-col slds-size_1-of-2">
+                    <lightning-card title="Signature Method Usage">
+                        <div class="chart-container">
+                            <canvas lwc:ref="methodChart" class="analytics-chart"></canvas>
+                        </div>
+                    </lightning-card>
+                </div>
+                
+                <div class="slds-col slds-size_1-of-1">
+                    <lightning-card title="Completion Trends (Last 30 Days)">
+                        <div class="chart-container">
+                            <canvas lwc:ref="trendsChart" class="analytics-chart trends-chart"></canvas>
+                        </div>
+                    </lightning-card>
+                </div>
+                
+            </div>
+            
+            <div class="slds-m-top_large">
+                <lightning-card title="Recent Signature Activity">
+                    <template if:true={recentActivity}>
+                        <lightning-datatable
+                            key-field="Id"
+                            data={recentActivity}
+                            columns={activityColumns}
+                            hide-checkbox-column="true">
+                        </lightning-datatable>
+                    </template>
+                    <template if:false={recentActivity}>
+                        <div class="slds-text-align_center slds-p-around_medium">
+                            <lightning-spinner alternative-text="Loading activity data..." size="small"></lightning-spinner>
+                        </div>
+                    </template>
+                </lightning-card>
+            </div>
+            
+            <div class="slds-m-top_large">
+                <lightning-card title="System Health Status">
+                    <div class="health-status slds-grid slds-gutters">
+                        <div class="slds-col slds-size_1-of-3">
+                            <div class="health-metric">
+                                <lightning-icon 
+                                    icon-name="utility:success" 
+                                    variant={systemHealthVariant} 
+                                    size="small"
+                                    class="slds-m-right_small">
+                                </lightning-icon>
+                                <span>System Status: {systemStatus}</span>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-3">
+                            <div class="health-metric">
+                                <lightning-icon 
+                                    icon-name="utility:clock" 
+                                    variant="inverse" 
+                                    size="small"
+                                    class="slds-m-right_small">
+                                </lightning-icon>
+                                <span>Uptime: {systemUptime}</span>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-3">
+                            <div class="health-metric">
+                                <lightning-icon 
+                                    icon-name="utility:database" 
+                                    variant="inverse" 
+                                    size="small"
+                                    class="slds-m-right_small">
+                                </lightning-icon>
+                                <span>Performance: {performanceScore}%</span>
+                            </div>
+                        </div>
+                    </div>
+                </lightning-card>
+            </div>
+            
+        </div>
+    </lightning-card>
+</template> -->
