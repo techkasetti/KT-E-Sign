@@ -1,18 +1,665 @@
 public class AuditTrailManager {
+
+        // Audit action constants
+    public static final String ACTION_DOCUMENT_CREATED = 'DOCUMENT_CREATED';
+    public static final String ACTION_DOCUMENT_UPDATED = 'DOCUMENT_UPDATED';
+    public static final String ACTION_DOCUMENT_DELETED = 'DOCUMENT_DELETED';
+    public static final String ACTION_SIGNATURE_REQUESTED = 'SIGNATURE_REQUESTED';
+    public static final String ACTION_SIGNATURE_SUBMITTED = 'SIGNATURE_SUBMITTED';
+    public static final String ACTION_SIGNATURE_COMPLETED = 'SIGNATURE_COMPLETED';
+    public static final String ACTION_SIGNATURE_REJECTED = 'SIGNATURE_REJECTED';
+    public static final String ACTION_SIGNATURE_CANCELLED = 'SIGNATURE_CANCELLED';
+    public static final String ACTION_COMPLIANCE_CHECK = 'COMPLIANCE_CHECK';
+    public static final String ACTION_COMPLIANCE_VIOLATION = 'COMPLIANCE_VIOLATION';
+    public static final String ACTION_EMAIL_SENT = 'EMAIL_SENT';
+    public static final String ACTION_EMAIL_FAILED = 'EMAIL_FAILED';
+    public static final String ACTION_DOCUSIGN_WEBHOOK = 'DOCUSIGN_WEBHOOK';
+    public static final String ACTION_API_REQUEST = 'API_REQUEST';
+    public static final String ACTION_API_RESPONSE = 'API_RESPONSE';
+    public static final String ACTION_USER_LOGIN = 'USER_LOGIN';
+    public static final String ACTION_USER_LOGOUT = 'USER_LOGOUT';
+    public static final String ACTION_SECURITY_EVENT = 'SECURITY_EVENT';
+    public static final String ACTION_SYSTEM_ERROR = 'SYSTEM_ERROR';
+    public static final String ACTION_SYSTEM_RESTART = 'SYSTEM_RESTART';
+    
+    // Status constants
+    public static final String STATUS_SUCCESS = 'SUCCESS';
+    public static final String STATUS_ERROR = 'ERROR';
+    public static final String STATUS_WARNING = 'WARNING';
+    public static final String STATUS_INFO = 'INFO';
+
+
     public static void logDocumentActivity(String documentId, String activityType, String details) {
         Document_Audit__c audit = new Document_Audit__c(
             DocumentId__c = documentId,
-            ActivityType__c = activityType,
-            ActivityDetails__c = details,
-            UserId__c = UserInfo.getUserId(),
-            IPAddress__c = getClientIP(),
-            Timestamp__c = System.now()
-        );
+        ActivityType__c = activityType,
+        ActivityDetails__c = details,
+        UserId__c = UserInfo.getUserId(),
+        IPAddress__c = getClientIP(),
+        Timestamp__c = System.now()
+            );
         insert audit;
     }
+    public static void logDocumentActivity(String recordId, String action, String status, String details) {
+        try {
+            AuditTrail__c audit = new AuditTrail__c(
+                Action__c = action,
+                Status__c = status,
+                Details__c = details + ' | Record ID: ' + recordId,
+                Timestamp__c = System.now(),
+                UserId__c = UserInfo.getUserId()
+            );
+            insert audit;
+        } catch (Exception e) {
+            System.debug('AuditTrailManager Error: ' + e.getMessage());
+        }
+    }
+
+private static String getRequestType(String requestId) {
+    try {
+        Signature_Request__c request = [
+            SELECT DocumentId__r.ContractType__c 
+            FROM Signature_Request__c 
+            WHERE Id = :requestId 
+            LIMIT 1
+        ];
+        return request.DocumentId__r.ContractType__c;
+    } catch (Exception e) {
+        return 'UNKNOWN';
+    }
+}
+private static Integer getDocumentCount(String requestId) {
+    try {
+        return [
+            SELECT COUNT() 
+            FROM Signature_Request__c 
+            WHERE Id = :requestId
+        ];
+    } catch (Exception e) {
+        return 0;
+    }
+}
+
+private static String getEmailTemplate(String emailType) {
+    // Return template name based on email type
+    switch on emailType {
+        when 'SIGNATURE_REQUEST' { return 'SignatureRequestTemplate'; }
+        when 'SIGNATURE_REMINDER' { return 'SignatureReminderTemplate'; }
+        when 'SIGNATURE_COMPLETED' { return 'SignatureCompletedTemplate'; }
+        when 'SIGNATURE_REJECTED' { return 'SignatureRejectedTemplate'; }
+        when default { return 'DefaultEmailTemplate'; }
+    }
+}
+
+private static String calculateRiskLevel(String severity, String eventType) {
+    if (severity.equals('CRITICAL') || eventType.contains('BREACH')) {
+        return 'HIGH_RISK';
+    } else if (severity.equals('HIGH') || eventType.contains('UNAUTHORIZED')) {
+        return 'MEDIUM_RISK';
+    } else {
+        return 'LOW_RISK';
+    }
+}
+
+    public static void logSignatureActivity(String signatureRequestId, String action, String status, String details) {
+        try {
+            AuditTrail__c audit = new AuditTrail__c(
+                Action__c = action,
+                Status__c = status,
+                Details__c = details + ' | Signature Request ID: ' + signatureRequestId,
+                Timestamp__c = System.now(),
+                UserId__c = UserInfo.getUserId()
+            );
+            insert audit;
+        } catch (Exception e) {
+            System.debug('AuditTrailManager Error: ' + e.getMessage());
+        }
+    }
     
+@AuraEnabled(cacheable=true)
+    public static List<AuditTrail__c> getAuditTrail(String recordId, Integer limitCount) {
+        try {
+            String query = 'SELECT Action__c, Status__c, Details__c, Timestamp__c, UserId__c ' +
+                          'FROM AuditTrail__c ' +
+                          'WHERE Details__c LIKE \'%' + recordId + '%\' ' +
+                          'ORDER BY Timestamp__c DESC';
+            
+            if (limitCount != null && limitCount > 0) {
+                query += ' LIMIT ' + limitCount;
+            }
+            
+            return Database.query(query);
+            
+        } catch (Exception e) {
+            System.debug('GetAuditTrail Error: ' + e.getMessage());
+            return new List<AuditTrail__c>();
+        }
+    }
+
+public static void logSignatureActivity(String requestId, String action, String details) {
+        createAuditEntry(requestId, action, 'Success', details);
+    }
+
+
+    public static void logSignatureActivity(
+        String requestId, 
+        String activityType, 
+        String signerEmail,
+        String details
+    ) {
+        Map<String, Object> metadata = new Map<String, Object>();
+        metadata.put('signerEmail', signerEmail);
+        metadata.put('requestType', getRequestType(requestId));
+        metadata.put('documentCount', getDocumentCount(requestId));
+        
+        createAuditEntry(
+            requestId, 
+            ACTION_SIGNATURE_REQUESTED.replace('REQUESTED', activityType.toUpperCase()), 
+            STATUS_SUCCESS, 
+            details,
+            metadata
+        );
+    }
+private static void publishAuditEvent(AuditTrail__c audit) {
+    try {
+        AuditTrailEvent__e event = new AuditTrailEvent__e();
+        event.AuditRecordId__c = audit.Id;
+        event.Action__c = audit.Action__c;
+        event.Status__c = audit.Status__c;
+        event.UserId__c = audit.UserId__c;
+        event.Timestamp__c = audit.Timestamp__c;
+        event.Details__c = audit.Details__c;
+        
+        EventBus.publish(event);
+    } catch (Exception e) {
+        System.debug('Failed to publish audit event: ' + e.getMessage());
+    }
+}
+
+// Wrapper classes
+public class BulkAuditRequest {
+    public String recordId;
+    public String action;
+    public String status;
+    public String details;
+    public Map<String, Object> metadata;
+}
+
+
+        public static void createAuditEntry(
+
+
+
+
+        String recordId, 
+        String action, 
+        String status, 
+        String details,
+        Map<String, Object> additionalData
+    ) {
+        try {
+            AuditTrail__c audit = new AuditTrail__c();
+            audit.RecordId__c = recordId;
+            audit.Action__c = action;
+            audit.Status__c = status;
+            audit.Details__c = details;
+            audit.Timestamp__c = System.now();
+            audit.UserId__c = UserInfo.getUserId();
+            audit.UserName__c = UserInfo.getName();
+            audit.IPAddress__c = getClientIPAddress();
+            audit.SessionId__c = UserInfo.getSessionId();
+            audit.OrganizationId__c = UserInfo.getOrganizationId();
+            
+            // Add browser and device information
+            audit.UserAgent__c = getUserAgent();
+            audit.DeviceType__c = getDeviceType();
+            
+            // Add geolocation if available
+            audit.LocationCity__c = getLocationCity();
+            audit.LocationCountry__c = getLocationCountry();
+            
+            // Add additional metadata as JSON
+            if (additionalData != null && !additionalData.isEmpty()) {
+                audit.AdditionalMetadata__c = JSON.serialize(additionalData);
+            }
+            
+            // Add correlation ID for request tracking
+            audit.CorrelationId__c = getCorrelationId();
+            
+            insert audit;
+            
+            // For critical events, create platform event for real-time monitoring
+            if (status == STATUS_ERROR || action.contains('SECURITY') || action.contains('COMPLIANCE_VIOLATION')) {
+                publishAuditEvent(audit);
+            }
+            
+        } catch (Exception e) {
+            // Fallback logging to system debug
+            System.debug(LoggingLevel.ERROR, 'Audit Trail Creation Failed: ' + e.getMessage());
+            System.debug(LoggingLevel.ERROR, 'Original Action: ' + action + ', Status: ' + status + ', Details: ' + details);
+        }
+    }
+    
+
+
+
+
+
+
+
+
+    //     String recordId, 
+    //     String action, 
+    //     String status, 
+    //     String details
+    // ) {
+    //     createAuditEntry(recordId, action, status, details, null);
+    // }
+
+    public static void logDocumentActivity(String documentId, String action, String details) {
+        try {
+            AuditTrail__c audit = new AuditTrail__c(
+                DocumentId__c = documentId,
+                Action__c = action,
+                Status__c = 'SUCCESS',
+                Details__c = details,
+                Timestamp__c = System.now(),
+                UserId__c = UserInfo.getUserId()
+            );
+            insert audit;
+            
+            System.debug('✓ Audit trail logged: ' + action);
+        } catch (Exception e) {
+            System.debug('⚠ Failed to log audit trail: ' + e.getMessage());
+            // Don't throw exception to avoid breaking main process
+        }
+    }
+
     private static String getClientIP() {
         // Implementation to capture client IP address
         return '127.0.0.1'; // Placeholder
     }
+
+        public static void logSystemActivity(String action, String details) {
+   
+           createAuditEntry('SYSTEM', action, 'Info', details);
+        }
+   
+            //     try {
+    //         AuditTrail__c audit = new AuditTrail__c(
+    //             Action__c = action,
+    //             Status__c = 'SUCCESS',
+    //             Details__c = details,
+    //             Timestamp__c = System.now(),
+    //             UserId__c = UserInfo.getUserId()
+    //         );
+    //         insert audit;
+            
+    //         System.debug('✓ System audit logged: ' + action);
+    //     } catch (Exception e) {
+    //         System.debug('⚠ Failed to log system audit: ' + e.getMessage());
+    //     }
+    // }
+    
+    public static void logError(String action, String errorMessage, String documentId) {
+        try {
+            AuditTrail__c audit = new AuditTrail__c(
+                DocumentId__c = documentId,
+                Action__c = action,
+                Status__c = 'ERROR',
+                Details__c = 'Error: ' + errorMessage,
+                Timestamp__c = System.now(),
+                UserId__c = UserInfo.getUserId()
+            );
+            insert audit;
+            
+            System.debug('✓ Error logged: ' + action);
+        } catch (Exception e) {
+            System.debug('⚠ Failed to log error: ' + e.getMessage());
+        }
+    }
+    
+    @AuraEnabled(cacheable=true)
+    public static List<AuditTrail__c> getDocumentAuditTrail(String documentId) {
+        try {
+            return [
+                SELECT Id, Action__c, Status__c, Details__c, Timestamp__c, 
+                       UserId__c, User__r.Name
+                FROM AuditTrail__c 
+                WHERE DocumentId__c = :documentId 
+                ORDER BY Timestamp__c DESC
+                LIMIT 100
+            ];
+        } catch (Exception e) {
+            throw new AuraHandledException('Failed to retrieve audit trail: ' + e.getMessage());
+        }
+    }
+    
+    @AuraEnabled(cacheable=true)
+    public static Map<String, Integer> getAuditSummary(Integer days) {
+        try {
+            DateTime cutoffDate = System.now().addDays(-days);
+            
+            List<AggregateResult> results = [
+                SELECT Action__c action, COUNT(Id) totalcount
+                FROM AuditTrail__c 
+                WHERE Timestamp__c >= :cutoffDate
+                GROUP BY Action__c
+            ];
+            
+            Map<String, Integer> summary = new Map<String, Integer>();
+            for (AggregateResult result : results) {
+                summary.put(
+                    (String)result.get('action'), 
+                    (Integer)result.get('count')
+                );
+            }
+            
+            return summary;
+        } catch (Exception e) {
+            throw new AuraHandledException('Failed to generate audit summary: ' + e.getMessage());
+        }
+    }
+
+    
+    public static void logSignatureRequest(String requestId, String action) {
+        try {
+            Signature_Request__c request = [SELECT DocumentId__c FROM Signature_Request__c WHERE Id = :requestId LIMIT 1];
+            
+            AuditTrail__c audit = new AuditTrail__c(
+                DocumentId__c = request.DocumentId__c,
+                Action__c = action,
+                Status__c = 'In Progress',
+                Details__c = 'Signature request created for request ID: ' + requestId,
+                Timestamp__c = System.now(),
+                UserId__c = UserInfo.getUserId()
+            );
+            insert audit;
+        } catch (Exception e) {
+            System.debug('Failed to log signature request audit: ' + e.getMessage());
+        }
+    }
+public static void logSignatureCompletion(String requestId, String signatureMethod) {
+   
+   
+           String details = 'Signature completed using method: ' + signatureMethod;
+        createAuditEntry(requestId, 'SIGNATURE_COMPLETED', 'Success', details);
 }
+   
+   
+   
+   
+    //     try {
+    //         Signature_Request__c request = [SELECT DocumentId__c, SignerName__c FROM Signature_Request__c WHERE Id = :requestId LIMIT 1];
+            
+    //         AuditTrail__c audit = new AuditTrail__c(
+    //             DocumentId__c = request.DocumentId__c,
+    //             Action__c = 'Signature Completed',
+    //             Status__c = 'Completed',
+    //             Details__c = 'Document signed by ' + request.SignerName__c + ' using method: ' + signatureMethod,
+    //             Timestamp__c = System.now(),
+    //             UserId__c = UserInfo.getUserId()
+    //         );
+    //         insert audit;
+    //     } catch (Exception e) {
+    //         System.debug('Failed to log signature completion audit: ' + e.getMessage());
+    //     }
+    // }
+
+    public static void logComplianceCheck(
+    String recordId,
+    Boolean passed,
+    String ruleType,
+    Decimal score,
+    List<String> violations
+) {
+    // Build metadata
+    Map<String, Object> metadata = new Map<String, Object>();
+    metadata.put('ruleType', ruleType);
+    metadata.put('complianceScore', score);
+    metadata.put('violations', violations);
+    metadata.put('ruleVersion', getCurrentRuleVersion());
+
+    // Determine status & action
+    String status = passed ? STATUS_SUCCESS : STATUS_WARNING;
+    String action = passed ? ACTION_COMPLIANCE_CHECK : ACTION_COMPLIANCE_VIOLATION;
+
+    // Build details message
+    String details = 'Compliance check ' + (passed ? 'passed' : 'failed') +
+                     ' with score: ' + String.valueOf(score) + '%' +
+                     ((violations != null && !violations.isEmpty())
+                        ? '. Violations: ' + String.join(violations, '; ')
+                        : '');
+
+    // Create audit entry
+    createAuditEntry(recordId, action, status, details, metadata);
+}
+public static void logAPIActivity(
+    String endpoint,
+    String method,
+    Integer statusCode,
+    String requestBody,
+    String responseBody,
+    Long responseTime
+) {
+    Map<String, Object> metadata = new Map<String, Object>();
+    metadata.put('endpoint', endpoint);
+    metadata.put('method', method);
+    metadata.put('statusCode', statusCode);
+    metadata.put('responseTime', responseTime);
+    metadata.put('requestSize', requestBody?.length());
+    metadata.put('responseSize', responseBody?.length());
+    
+    String status = (statusCode >= 200 && statusCode < 300) ? STATUS_SUCCESS : STATUS_ERROR;
+    String details = method + ' request to ' + endpoint + 
+                    ' returned ' + statusCode + 
+                    ' in ' + responseTime + 'ms';
+    
+    createAuditEntry(null, ACTION_API_REQUEST, status, details, metadata);
+}
+public static void logEmailActivity(
+    String recipientEmail,
+    String emailType,
+    Boolean success,
+    String details
+) {
+    Map<String, Object> metadata = new Map<String, Object>();
+    metadata.put('recipientEmail', recipientEmail);
+    metadata.put('emailType', emailType);
+    metadata.put('emailTemplate', getEmailTemplate(emailType));
+    
+    String action = success ? ACTION_EMAIL_SENT : ACTION_EMAIL_FAILED;
+    String status = success ? STATUS_SUCCESS : STATUS_ERROR;
+    
+    createAuditEntry(null, action, status, details, metadata);
+}
+public static void logSecurityEvent(
+    String eventType,
+    String severity,
+    String description,
+    String affectedResource
+) {
+    Map<String, Object> metadata = new Map<String, Object>();
+    metadata.put('eventType', eventType);
+    metadata.put('severity', severity);
+    metadata.put('affectedResource', affectedResource);
+    metadata.put('detectionMethod', 'AUTOMATED');
+    metadata.put('riskLevel', calculateRiskLevel(severity, eventType));
+    
+    String status = severity.equals('CRITICAL') ? STATUS_ERROR : 
+                   severity.equals('HIGH') ? STATUS_WARNING : STATUS_INFO;
+    
+    createAuditEntry(affectedResource, ACTION_SECURITY_EVENT, status, description, metadata);
+    
+    // Send immediate notification for critical security events
+    if (severity.equals('CRITICAL')) {
+        NotificationService.sendSecurityAlert(eventType, description);
+    }
+}
+
+private static String getClientIPAddress() {
+    // TODO: DEVELOPER IMPLEMENTATION REQUIRED
+    // This method should extract client IP from request headers
+    // Implementation depends on your Salesforce environment and proxy setup
+    return 'IP_ADDRESS_PLACEHOLDER'; // Replace with actual implementation
+}
+private static String getUserAgent() {
+    // TODO: DEVELOPER IMPLEMENTATION REQUIRED
+    // Extract user agent from HTTP headers if available
+    return 'USER_AGENT_PLACEHOLDER'; // Replace with actual implementation
+}
+private static String getDeviceType() {
+    // TODO: DEVELOPER IMPLEMENTATION REQUIRED
+    // Determine device type from user agent or other indicators
+    return 'UNKNOWN'; // Replace with actual device detection logic
+}
+private static String getLocationCity() {
+    // TODO: DEVELOPER IMPLEMENTATION REQUIRED
+    // Implement geolocation service integration
+    return null; // Replace with actual geolocation service
+}
+private static String getLocationCountry() {
+    // TODO: DEVELOPER IMPLEMENTATION REQUIRED
+    // Implement geolocation service integration
+    return null; // Replace with actual geolocation service
+}
+
+private static String getCorrelationId() {
+    // Generate unique correlation ID for request tracking
+    return 'CORR-' + System.now().getTime() + '-' + Math.round(Math.random() * 10000);
+}
+
+private static String getCurrentRuleVersion() {
+    // TODO: DEVELOPER IMPLEMENTATION REQUIRED
+    // Return current compliance rule version
+    return 'v1.0.0'; // Replace with actual version tracking
+}
+
+private static String getDocumentType(String documentId) {
+    try {
+        DocumentLifecycleConfiguration__c doc = [
+            SELECT ContractType__c 
+            FROM DocumentLifecycleConfiguration__c 
+            WHERE Id = :documentId 
+            LIMIT 1
+        ];
+        return doc.ContractType__c;
+    } catch (Exception e) {
+        return 'UNKNOWN';
+    }
+}
+private static String getDocumentRegion(String documentId) {
+    try {
+        DocumentLifecycleConfiguration__c doc = [
+            SELECT Region__c 
+            FROM DocumentLifecycleConfiguration__c 
+            WHERE Id = :documentId 
+            LIMIT 1
+        ];
+        return doc.Region__c;
+    } catch (Exception e) {
+        return 'UNKNOWN';
+    }
+}
+
+public static void createBulkAuditEntries(List<BulkAuditRequest> requests) {
+    List<AuditTrail__c> auditRecords = new List<AuditTrail__c>();
+    
+    for (BulkAuditRequest request : requests) {
+        AuditTrail__c audit = new AuditTrail__c();
+        audit.RecordId__c = request.recordId;
+        audit.Action__c = request.action;
+        audit.Status__c = request.status;
+        audit.Details__c = request.details;
+        audit.Timestamp__c = System.now();
+        audit.UserId__c = UserInfo.getUserId();
+        audit.UserName__c = UserInfo.getName();
+        audit.IPAddress__c = getClientIPAddress();
+        audit.SessionId__c = UserInfo.getSessionId();
+        audit.OrganizationId__c = UserInfo.getOrganizationId();
+        audit.UserAgent__c = getUserAgent();
+        audit.DeviceType__c = getDeviceType();
+        audit.LocationCity__c = getLocationCity();
+        audit.LocationCountry__c = getLocationCountry();
+        audit.CorrelationId__c = getCorrelationId();
+        
+        if (request.metadata != null && !request.metadata.isEmpty()) {
+            audit.AdditionalMetadata__c = JSON.serialize(request.metadata);
+        }
+        
+        auditRecords.add(audit);
+    }
+    
+    try {
+        insert auditRecords;
+    } catch (Exception e) {
+        System.debug(LoggingLevel.ERROR, 'Bulk audit creation failed: ' + e.getMessage());
+    }
+}
+
+
+
+public static void logComplianceCheck(ComplianceChecker.ComplianceValidationResult result, String region, String contractType) {
+        try {
+            String status = result.isCompliant ? 'Compliant' : 'Non-Compliant';
+            String details = 'Compliance Score: ' + result.complianceScore + '%. Region: ' + region + ', Contract Type: ' + contractType;
+            
+            if (!result.violations.isEmpty()) {
+                details += '. Violations: ' + String.join(result.violations, '; ');
+            }
+            
+            AuditTrail__c audit = new AuditTrail__c(
+                Action__c = 'Compliance Check',
+                Status__c = status,
+                Details__c = details,
+                Timestamp__c = System.now(),
+                UserId__c = UserInfo.getUserId()
+            );
+            insert audit;
+        } catch (Exception e) {
+            System.debug('Failed to log compliance check audit: ' + e.getMessage());
+        }
+    }
+        @AuraEnabled(cacheable=true)
+    public static List<AuditTrail__c> getSystemAuditTrail(Integer recordLimit) {
+        try {
+            Integer limitValue = recordLimit != null ? recordLimit : 50;
+            return [
+                SELECT Id, Action__c, Status__c, Details__c, Timestamp__c, UserId__c,
+                       User__r.Name
+                FROM AuditTrail__c
+                ORDER BY Timestamp__c DESC
+                LIMIT :limitValue
+            ];
+        } catch (Exception e) {
+            throw new AuraHandledException('Failed to retrieve system audit trail: ' + e.getMessage());
+        }
+    }
+    public static String generateAuditSummary(String recordId) {
+    try {
+        List<AuditTrail__c> trails = getAuditTrail(recordId, 50);
+        
+        if (trails.isEmpty()) {
+            return 'No audit trail found for this record.';
+        }
+        
+        String summary = 'AUDIT TRAIL SUMMARY\n';
+        summary += 'Record ID: ' + recordId + '\n';
+        summary += 'Total Activities: ' + trails.size() + '\n\n';
+        
+        for (AuditTrail__c trail : trails) {
+            summary += trail.Timestamp__c.format('MM/dd/yyyy HH:mm') + ' - ';
+            summary += trail.Action__c + ': ' + trail.Status__c + '\n';
+            summary += 'Details: ' + trail.Details__c + '\n\n';
+        }
+        
+        return summary;
+    } catch (Exception e) {
+        return 'Error generating audit summary: ' + e.getMessage();
+    }
+}
+
+
+}
+
+

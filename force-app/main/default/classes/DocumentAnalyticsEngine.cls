@@ -147,8 +147,8 @@ public class DocumentAnalyticsEngine {
         for (PerformanceBenchmark__c benchmark : benchmarks) {
             metrics.operationMetrics.put(
                 benchmark.OperationType__c,
-                benchmark.AVG(ExecutionTime__c)
-            );
+            benchmark.AVG(ExecutionTime__c)
+                );
         }
         
         return metrics;
@@ -184,8 +184,8 @@ public class DocumentAnalyticsEngine {
             }
             metrics.actionBreakdown.put(
                 actionType,
-                metrics.actionBreakdown.get(actionType) + userCount
-            );
+            metrics.actionBreakdown.get(actionType) + userCount
+                );
             
             // Track daily activity
             if (!dailyUserCounts.containsKey(activityDate)) {
@@ -214,8 +214,8 @@ public class DocumentAnalyticsEngine {
             insight.category = 'COMPLIANCE';
             insight.severity = 'HIGH';
             insight.title = 'Compliance Rate Below Target';
-            insight.description = 'Current compliance pass rate (' + 
-                dashboard.complianceMetrics.passRate + 
+            insight.description = 'Current compliance pass rate (' +
+                dashboard.complianceMetrics.passRate +
                 '%) is below the recommended 90% threshold.';
             insight.recommendation = 'Review common violation patterns and enhance document templates.';
             insight.confidence = 95;
@@ -228,8 +228,8 @@ public class DocumentAnalyticsEngine {
             insight.category = 'PERFORMANCE';
             insight.severity = 'MEDIUM';
             insight.title = 'Processing Time Above Target';
-            insight.description = 'Average document processing time (' + 
-                dashboard.performanceMetrics.averageProcessingTime + 
+            insight.description = 'Average document processing time (' +
+                dashboard.performanceMetrics.averageProcessingTime +
                 's) exceeds the 3-second target.';
             insight.recommendation = 'Consider implementing caching strategies or optimizing document templates.';
             insight.confidence = 87;
@@ -242,7 +242,7 @@ public class DocumentAnalyticsEngine {
             insight.category = 'USAGE';
             insight.severity = 'LOW';
             insight.title = 'Low Document Creation Activity';
-            insight.description = 'Only ' + dashboard.documentMetrics.documentsCreatedToday + 
+            insight.description = 'Only ' + dashboard.documentMetrics.documentsCreatedToday +
                 ' documents created today, which is below average.';
             insight.recommendation = 'Consider user training or system promotion to increase adoption.';
             insight.confidence = 73;

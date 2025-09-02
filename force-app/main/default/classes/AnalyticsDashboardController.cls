@@ -4,7 +4,7 @@ public with sharing class AnalyticsDashboardController {
         try {
             DateTime endTime = DateTime.now();
             DateTime startTime;
-
+            
             // Determine time range based on timeframe
             switch on timeframe?.toLowerCase() {
                 when 'today' { startTime = DateTime.newInstance(Date.today(), Time.newInstance(0,0,0,0)); }
@@ -13,7 +13,7 @@ public with sharing class AnalyticsDashboardController {
                 when 'quarter' { startTime = endTime.addDays(-90); }
                 when else { startTime = endTime.addDays(-7); }
             }
-
+            
             // Generate report based on type
             AnalyticsReportManager.AnalyticsReport report;
             switch on reportType?.toLowerCase() {
@@ -25,14 +25,14 @@ public with sharing class AnalyticsDashboardController {
                 when 'users' { report = AnalyticsReportManager.generateComprehensiveReport('USER_ACTIVITY', startTime, endTime); }
                 when else { report = AnalyticsReportManager.generateComprehensiveReport('EXECUTIVE_SUMMARY', startTime, endTime); }
             }
-
+            
             return formatReportForLWC(report);
-
+            
         } catch (Exception e) {
             throw new AuraHandledException('Error loading dashboard data: ' + e.getMessage());
         }
     }
-}
+
 @AuraEnabled
 public static Map<String, Object> getRealTimeMetrics() {
     try {
@@ -52,7 +52,7 @@ public static List<Map<String, Object>> getAvailableReports() {
             ORDER BY Generated_Date__c DESC
             LIMIT 50
         ];
-
+        
         for (AnalyticsReportArchive__c archive : archives) {
             Map<String, Object> reportInfo = new Map<String, Object>();
             reportInfo.put('id', archive.Id);
@@ -64,7 +64,7 @@ public static List<Map<String, Object>> getAvailableReports() {
             reports.add(reportInfo);
         }
         return reports;
-
+        
     } catch (Exception e) {
         throw new AuraHandledException('Error loading available reports: ' + e.getMessage());
     }
@@ -114,7 +114,7 @@ public static void scheduleReport(String reportType, String frequency, String re
 /** Format report for Lightning Web Component consumption */
 private static Map<String, Object> formatReportForLWC(AnalyticsReportManager.AnalyticsReport report) {
     Map<String, Object> formattedReport = new Map<String, Object>();
-
+    
     formattedReport.put('reportType', report.reportType);
     formattedReport.put('generatedAt', report.generatedAt);
     formattedReport.put('periodStart', report.periodStart);
@@ -122,10 +122,10 @@ private static Map<String, Object> formatReportForLWC(AnalyticsReportManager.Ana
     formattedReport.put('overallScore', report.overallScore);
     formattedReport.put('executiveSummary', report.executiveSummary);
     formattedReport.put('hasAnomalies', report.hasAnomalies);
-
+    
     // Metrics
     formattedReport.put('metrics', report.metrics);
-
+    
     // Format insights
     List<Map<String, Object>> formattedInsights = new List<Map<String, Object>>();
     for (AnalyticsReportManager.AnalyticsInsight insight : report.insights) {
@@ -138,20 +138,20 @@ private static Map<String, Object> formatReportForLWC(AnalyticsReportManager.Ana
         insightData.put('recommendation', insight.recommendation);
         insightData.put('discoveredAt', insight.discoveredAt);
         insightData.put('supportingData', insight.supportingData);
-
+        
         // Add severity styling
         insightData.put('severityClass', getSeverityClass(insight.severity));
         insightData.put('severityIcon', getSeverityIcon(insight.severity));
         formattedInsights.add(insightData);
     }
     formattedReport.put('insights', formattedInsights);
-
+    
     // Chart data
     formattedReport.put('chartData', report.chartData);
-
+    
     // Critical findings
     formattedReport.put('criticalFindings', report.criticalFindings);
-
+    
     return formattedReport;
 }
 
@@ -182,4 +182,4 @@ private static String generatePDFReport(AnalyticsReportManager.AnalyticsReport r
     // This would integrate with a PDF generation service
     return 'PDF generation not implemented - would generate PDF for report: ' + report.reportType;
 }
-
+}

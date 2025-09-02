@@ -164,7 +164,10 @@
     
 //     processPredictiveInsights(predictiveData) {
 //         // Process volume predictions
-//         this.volumePredictions = predictiveData.volumePredictions?.
+//        this.volumePredictions = predictiveData && predictiveData.volumePredictions 
+//     ? predictiveData.volumePredictions 
+//     : null;
+
 // // Process volume predictions
 // this.volumePredictions = predictiveData.volumePredictions?.map(prediction => ({
 //     ...prediction,

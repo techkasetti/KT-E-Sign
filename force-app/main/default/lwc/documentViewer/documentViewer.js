@@ -1,12 +1,10 @@
 // Developer_build_step_by_step_impl_e_sign v6.............................................................
 
 
-
-// import { LightningElement, api, track, wire } from &#39;lwc&#39;;
-// import { ShowToastEvent } from &#39;lightning/platformShowToastEvent&#39;;
-// import { getRecord, getFieldValue } from &#39;lightning/uiRecordApi&#39;;
-// import { refreshApex } from &#39;@salesforce/apex&#39;;
-// import { NavigationMixin } from
+// import { LightningElement, api, track, wire } from 'lwc';
+// import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+// import { getRecord, getFieldValue } from 'lightning/uiRecordApi';
+// import { refreshApex } from '@salesforce/apex';
 // import { NavigationMixin } from 'lightning/navigation';
 
 // // Import Apex methods
@@ -1003,26 +1001,39 @@
 // async resendSignatureRequest(requestId) {
 //     try {
 //         // Implementation for resending signature request
-//         this.showToast(&#39;Info&#39;, &#39;Resend functionality will be implemented&#39;, &#39;info&#39;);
-//         // In real implementation, call Apex method to resend notification
-//         // await resendSignatureNotification({ requestId: requestId });
-//         // this.showToast(&#39;Success&#39;, &#39;Signature request resent successfully!&#39;, &#39;success&#39;);
-//         // return refreshApex(this.wiredSignatureRequestsResult);
+//         this.showToast('Info', 'Resend functionality will be implemented', 'info');
+
+//         // 🔹 In real implementation, uncomment below lines
+//         // await resendSignatureNotification({ requestId });
+//         // this.showToast('Success', 'Signature request resent successfully!', 'success');
+//         // await refreshApex(this.wiredSignatureRequestsResult);
+
 //     } catch (error) {
-//         this.showToast(&#39;Error&#39;, error.body.message || &#39;Failed to resend signature request&#39;, &#39;error&#39;);
+//         this.showToast(
+//             'Error',
+//             error?.body?.message || 'Failed to resend signature request',
+//             'error'
+//         );
 //     }
 // }
+
 
 // async cancelSignatureRequest(requestId) {
 //     try {
 //         // Implementation for canceling signature request
-//         this.showToast(&#39;Info&#39;, &#39;Cancel functionality will be implemented&#39;, &#39;info&#39;);
-//         // In real implementation, update request status to cancelled
-//         // await cancelSignatureRequest({ requestId: requestId });
-//         // this.showToast(&#39;Success&#39;, &#39;Signature request cancelled successfully!&#39;, &#39;success&#39;);
-//         // return refreshApex(this.wiredSignatureRequestsResult);
+//         this.showToast('Info', 'Cancel functionality will be implemented', 'info');
+
+//         // 🔹 In real implementation, uncomment below lines
+//         // await cancelSignatureRequest({ requestId });
+//         // this.showToast('Success', 'Signature request cancelled successfully!', 'success');
+//         // await refreshApex(this.wiredSignatureRequestsResult);
+
 //     } catch (error) {
-//         this.showToast(&#39;Error&#39;, error.body.message || &#39;Failed to cancel signature request&#39;, &#39;error&#39;);
+//         this.showToast(
+//             'Error',
+//             error?.body?.message || 'Failed to cancel signature request',
+//             'error'
+//         );
 //     }
 // }
 
@@ -1030,8 +1041,8 @@
 // updateDocumentContent() {
 //     if (this.documentData.GeneratedClause__c) {
 //         // Use requestAnimationFrame to ensure DOM is ready
-//         requestAnimationFrame(() =&gt; {
-//             const clauseElement = this.template.querySelector(&#39;.clause-text&#39;);
+//         requestAnimationFrame(() => {
+//             const clauseElement = this.template.querySelector('.clause-text');
 //             if (clauseElement) {
 //                 clauseElement.innerHTML = this.formatDocumentText(this.documentData.GeneratedClause__c);
 //             }
@@ -1039,13 +1050,15 @@
 //     }
 // }
 
+
 // formatDocumentText(text) {
 //     // Format the document text with proper styling
 //     return text
-//         .replace(/\n/g, &#39;&lt;br&gt;&#39;)
-//         .replace(/\*\*(.*?)\*\*/g, &#39;&lt;strong&gt;$1&lt;/strong&gt;&#39;)
-//         .replace(/\*(.*?)\*/g, &#39;&lt;em&gt;$1&lt;/em&gt;&#39;);
+//         .replace(/\n/g, '<br>')
+//         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+//         .replace(/\*(.*?)\*/g, '<em>$1</em>');
 // }
+
 
 // showToast(title, message, variant) {
 //     const evt = new ShowToastEvent({
@@ -1061,7 +1074,6 @@
 
 
 //Developer_build_step_by_step_impl_e_sign.........................................................
-
 
 
 // import { LightningElement, api, track, wire } from 'lwc';
@@ -1097,6 +1109,8 @@
 //     @track isLoading = false;
 //     @track isSignatureDisabled = false;
 
+//     wiredSignatureRequests; // store wire result for refresh
+
 //     @wire(getRecord, { recordId: '$recordId', fields: DOCUMENT_FIELDS })
 //     wiredDocument({ error, data }) {
 //         if (data) {
@@ -1107,7 +1121,9 @@
 //     }
 
 //     @wire(getSignatureRequests)
-//     wiredSignatureRequests({ error, data }) {
+//     wiredSignatureRequestsResult(value) {
+//         this.wiredSignatureRequests = value; // store for refreshApex
+//         const { error, data } = value;
 //         if (data) {
 //             this.processSignatureRequests(data);
 //         } else if (error) {
@@ -1196,11 +1212,17 @@
 //             this.selectedRequestId = requestId;
 //             this.showSignatureModal = true;
 //             this.showToast('Success', 'Signature request created successfully!', 'success');
+
+//             await this.refreshSignatureRequests();
 //         } catch (error) {
 //             this.showToast('Error', 'Failed to request signature: ' + error.body?.message, 'error');
 //         } finally {
 //             this.isLoading = false;
 //         }
+//     }
+
+//     async refreshSignatureRequests() {
+//         return refreshApex(this.wiredSignatureRequests);
 //     }
 
 //     handleDownloadPDF() {
@@ -1216,6 +1238,10 @@
 //         this.showToast('Success', 'Signature completed successfully!', 'success');
 //     }
 
+//     handleModalCancel() {
+//         this.showSignatureModal = false;
+//     }
+
 //     showToast(title, message, variant) {
 //         this.dispatchEvent(
 //             new ShowToastEvent({
@@ -1224,23 +1250,5 @@
 //                 variant
 //             })
 //         );
-//     }
-// }
-// Refresh signature requests
-//         return refreshApex(this.wiredSignatureRequests);
-//     }
-    
-//     handleModalCancel() {
-//         this.showSignatureModal = false;
-//     }
-    
-//     // Utility method
-//     showToast(title, message, variant) {
-//         const evt = new ShowToastEvent({
-//             title: title,
-//             message: message,
-//             variant: variant
-//         });
-//         this.dispatchEvent(evt);
 //     }
 // }

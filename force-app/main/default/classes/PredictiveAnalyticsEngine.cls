@@ -62,7 +62,7 @@ public class PredictiveAnalyticsEngine {
      * Predict document processing performance
      */
     public static PerformancePrediction predictProcessingPerformance(
-        String documentType, String region, String role) {
+    String documentType, String region, String role) {
         
         PerformancePrediction prediction = new PerformancePrediction();
         
@@ -179,11 +179,11 @@ public class PredictiveAnalyticsEngine {
      * Parse ML service response into prediction object
      */
     private static ComplianceRiskPrediction parseCompliancePrediction(
-        Map<String, Object> responseData, Map<String, Object> historicalData) {
+    Map<String, Object> responseData, Map<String, Object> historicalData) {
         
         ComplianceRiskPrediction prediction = new ComplianceRiskPrediction();
         
-        DocumentLifecycleConfiguration__c config = 
+        DocumentLifecycleConfiguration__c config =
             (DocumentLifecycleConfiguration__c) historicalData.get('documentConfig');
         
         prediction.documentId = config.Id;
@@ -198,117 +198,117 @@ public class PredictiveAnalyticsEngine {
         
         return prediction;
     }
-private static ComplianceRiskPrediction generateRuleBasedPrediction(Map<String, Object> historicalData) {
-    ComplianceRiskPrediction prediction = new ComplianceRiskPrediction();
-
-    DocumentLifecycleConfiguration__c config = 
-        (DocumentLifecycleConfiguration__c) historicalData.get('documentConfig');
-    List<AuditTrail__c> violations = 
-        (List<AuditTrail__c>) historicalData.get('violations');
-
-    prediction.documentId = config.Id;
-    prediction.documentType = config.ContractType__c;
-    prediction.region = config.Region__c;
-    prediction.predictionDate = DateTime.now();
-    prediction.predictedViolations = new List<String>();
-    prediction.recommendations = new List<String>();
-    prediction.factorWeights = new Map<String, Decimal>();
-
-    // Rule-based risk calculation
-    Decimal baseRisk = 30.0; // Base risk score
-
-    // Factor 1: Historical compliance score
-    if (config.ComplianceScore__c != null) {
-        if (config.ComplianceScore__c < 70) {
-            baseRisk += 25;
-            prediction.predictedViolations.add('Low historical compliance score');
-            prediction.recommendations.add('Review and strengthen compliance controls');
-        } else if (config.ComplianceScore__c > 90) {
-            baseRisk -= 10;
+    private static ComplianceRiskPrediction generateRuleBasedPrediction(Map<String, Object> historicalData) {
+        ComplianceRiskPrediction prediction = new ComplianceRiskPrediction();
+        
+        DocumentLifecycleConfiguration__c config =
+            (DocumentLifecycleConfiguration__c) historicalData.get('documentConfig');
+        List<AuditTrail__c> violations =
+            (List<AuditTrail__c>) historicalData.get('violations');
+        
+        prediction.documentId = config.Id;
+        prediction.documentType = config.ContractType__c;
+        prediction.region = config.Region__c;
+        prediction.predictionDate = DateTime.now();
+        prediction.predictedViolations = new List<String>();
+        prediction.recommendations = new List<String>();
+        prediction.factorWeights = new Map<String, Decimal>();
+        
+        // Rule-based risk calculation
+        Decimal baseRisk = 30.0; // Base risk score
+        
+        // Factor 1: Historical compliance score
+        if (config.ComplianceScore__c != null) {
+            if (config.ComplianceScore__c < 70) {
+                baseRisk += 25;
+                prediction.predictedViolations.add('Low historical compliance score');
+                prediction.recommendations.add('Review and strengthen compliance controls');
+            } else if (config.ComplianceScore__c > 90) {
+                baseRisk -= 10;
+            }
+            prediction.factorWeights.put('historicalCompliance', config.ComplianceScore__c);
         }
-        prediction.factorWeights.put('historicalCompliance', config.ComplianceScore__c);
-    }
-
-    // Factor 2: Recent violations count
-    Integer recentViolationsCount = violations != null ? violations.size() : 0;
-    if (recentViolationsCount > 5) {
-        baseRisk += 20;
-        prediction.predictedViolations.add('High frequency of recent violations');
-        prediction.recommendations.add('Conduct compliance audit and staff training');
-    } else if (recentViolationsCount == 0) {
-        baseRisk -= 5;
-    }
-    prediction.factorWeights.put('recentViolations', recentViolationsCount);
-
-    // Factor 3: Region-specific risk
-    Map<String, Decimal> regionRisk = new Map<String, Decimal>{
-        'US' => 5.0,
-        'EU' => 15.0,   // GDPR complexity
-        'APAC' => 10.0,
-        'Global' => 20.0 // Multi-jurisdiction complexity
-    };
-    Decimal regionFactor = regionRisk.get(config.Region__c);
-    if (regionFactor != null) {
-        baseRisk += regionFactor;
-        prediction.factorWeights.put('regionComplexity', regionFactor);
-    }
-
-    // Factor 4: Document type risk
-    Map<String, Decimal> documentTypeRisk = new Map<String, Decimal>{
-        'Employment Contract' => 10.0,
-        'NDA' => 5.0,
-        'SLA' => 15.0,
-        'Service Agreement' => 12.0
-    };
-    Decimal typeRisk = documentTypeRisk.get(config.ContractType__c);
-    if (typeRisk != null) {
-        baseRisk += typeRisk;
-        prediction.factorWeights.put('documentComplexity', typeRisk);
-    }
-
-    // Factor 5: Document age (newer documents have higher risk due to less validation)
-    if (config.CreatedDate__c != null) {
-        Integer daysSinceCreation = config.CreatedDate__c.daysBetween(Date.today());
-        if (daysSinceCreation < 7) {
-            baseRisk += 5;
-            prediction.predictedViolations.add('Recently created document requires additional validation');
-            prediction.recommendations.add('Schedule comprehensive review within 30 days');
+        
+        // Factor 2: Recent violations count
+        Integer recentViolationsCount = violations != null ? violations.size() : 0;
+        if (recentViolationsCount > 5) {
+            baseRisk += 20;
+            prediction.predictedViolations.add('High frequency of recent violations');
+            prediction.recommendations.add('Conduct compliance audit and staff training');
+        } else if (recentViolationsCount == 0) {
+            baseRisk -= 5;
         }
-        prediction.factorWeights.put('documentAge', daysSinceCreation);
+        prediction.factorWeights.put('recentViolations', recentViolationsCount);
+        
+        // Factor 3: Region-specific risk
+        Map<String, Decimal> regionRisk = new Map<String, Decimal>{
+            'US' => 5.0,
+            'EU' => 15.0,   // GDPR complexity
+            'APAC' => 10.0,
+            'Global' => 20.0 // Multi-jurisdiction complexity
+        };
+        Decimal regionFactor = regionRisk.get(config.Region__c);
+        if (regionFactor != null) {
+            baseRisk += regionFactor;
+            prediction.factorWeights.put('regionComplexity', regionFactor);
+        }
+        
+        // Factor 4: Document type risk
+        Map<String, Decimal> documentTypeRisk = new Map<String, Decimal>{
+            'Employment Contract' => 10.0,
+            'NDA' => 5.0,
+            'SLA' => 15.0,
+            'Service Agreement' => 12.0
+        };
+        Decimal typeRisk = documentTypeRisk.get(config.ContractType__c);
+        if (typeRisk != null) {
+            baseRisk += typeRisk;
+            prediction.factorWeights.put('documentComplexity', typeRisk);
+        }
+        
+        // Factor 5: Document age (newer documents have higher risk due to less validation)
+        if (config.CreatedDate__c != null) {
+            Integer daysSinceCreation = config.CreatedDate__c.daysBetween(Date.today());
+            if (daysSinceCreation < 7) {
+                baseRisk += 5;
+                prediction.predictedViolations.add('Recently created document requires additional validation');
+                prediction.recommendations.add('Schedule comprehensive review within 30 days');
+            }
+            prediction.factorWeights.put('documentAge', daysSinceCreation);
+        }
+        
+        // Cap the risk score and determine level
+        prediction.riskScore = Math.min(baseRisk, 100.0);
+        prediction.riskLevel = calculateRiskLevel(prediction.riskScore);
+        
+        // Add general recommendations based on risk level
+        if (prediction.riskScore > 70) {
+            prediction.recommendations.add('Implement immediate compliance review');
+            prediction.recommendations.add('Consider legal consultation for high-risk clauses');
+            prediction.recommendations.add('Increase monitoring frequency for this document type');
+        } else if (prediction.riskScore > 50) {
+            prediction.recommendations.add('Schedule quarterly compliance review');
+            prediction.recommendations.add('Monitor compliance metrics closely');
+        } else {
+            prediction.recommendations.add('Maintain standard compliance monitoring');
+        }
+        
+        return prediction;
     }
-
-    // Cap the risk score and determine level
-    prediction.riskScore = Math.min(baseRisk, 100.0);
-    prediction.riskLevel = calculateRiskLevel(prediction.riskScore);
-
-    // Add general recommendations based on risk level
-    if (prediction.riskScore > 70) {
-        prediction.recommendations.add('Implement immediate compliance review');
-        prediction.recommendations.add('Consider legal consultation for high-risk clauses');
-        prediction.recommendations.add('Increase monitoring frequency for this document type');
-    } else if (prediction.riskScore > 50) {
-        prediction.recommendations.add('Schedule quarterly compliance review');
-        prediction.recommendations.add('Monitor compliance metrics closely');
-    } else {
-        prediction.recommendations.add('Maintain standard compliance monitoring');
+    
+    /** Calculate risk level based on numeric score */
+    private static String calculateRiskLevel(Decimal riskScore) {
+        if (riskScore >= 80) return 'CRITICAL';
+        if (riskScore >= 60) return 'HIGH';
+        if (riskScore >= 40) return 'MEDIUM';
+        if (riskScore >= 20) return 'LOW';
+        return 'MINIMAL';
     }
-
-    return prediction;
-}
-
-/** Calculate risk level based on numeric score */
-private static String calculateRiskLevel(Decimal riskScore) {
-    if (riskScore >= 80) return 'CRITICAL';
-    if (riskScore >= 60) return 'HIGH';
-    if (riskScore >= 40) return 'MEDIUM';
-    if (riskScore >= 20) return 'LOW';
-    return 'MINIMAL';
-}
-
-/** Store compliance prediction for tracking and analysis */
-private static void storeCompliancePrediction(ComplianceRiskPrediction prediction) {
-    CompliancePrediction__c record = new CompliancePrediction__c(
-        Document_Id__c = prediction.documentId,
+    
+    /** Store compliance prediction for tracking and analysis */
+    private static void storeCompliancePrediction(ComplianceRiskPrediction prediction) {
+        CompliancePrediction__c record = new CompliancePrediction__c(
+            Document_Id__c = prediction.documentId,
         Document_Type__c = prediction.documentType,
         Region__c = prediction.region,
         Risk_Score__c = prediction.riskScore,
@@ -319,157 +319,157 @@ private static void storeCompliancePrediction(ComplianceRiskPrediction predictio
         Prediction_Date__c = prediction.predictionDate,
         Model_Version__c = 'rule-based-v1',
         Status__c = 'ACTIVE'
-    );
-    insert record;
-
-    // Update document configuration with risk assessment
-    DocumentLifecycleConfiguration__c config = new DocumentLifecycleConfiguration__c(
-        Id = prediction.documentId,
+            );
+        insert record;
+        
+        // Update document configuration with risk assessment
+        DocumentLifecycleConfiguration__c config = new DocumentLifecycleConfiguration__c(
+            Id = prediction.documentId,
         Predicted_Risk_Score__c = prediction.riskScore,
         Predicted_Risk_Level__c = prediction.riskLevel,
         Last_Risk_Assessment__c = DateTime.now()
-    );
-    update config;
-}
-
-/** Generate high-risk alert for immediate attention */
-private static void generateHighRiskAlert(ComplianceRiskPrediction prediction) {
-    SLAViolationAlert__c alert = new SLAViolationAlert__c(
-        RecordId__c = prediction.documentId,
+            );
+        update config;
+    }
+    
+    /** Generate high-risk alert for immediate attention */
+    private static void generateHighRiskAlert(ComplianceRiskPrediction prediction) {
+        SLAViolationAlert__c alert = new SLAViolationAlert__c(
+            RecordId__c = prediction.documentId,
         Alert_Type__c = 'HIGH_COMPLIANCE_RISK',
         Severity__c = prediction.riskLevel,
         Message__c = 'High compliance risk detected (Score: ' + prediction.riskScore + '). ' +
-                     'Predicted violations: ' + String.join(prediction.predictedViolations, ', '),
+            'Predicted violations: ' + String.join(prediction.predictedViolations, ', '),
         Timestamp__c = DateTime.now(),
         Status__c = 'OPEN',
         Assigned_To__c = getComplianceManagerId(),
         Auto_Generated__c = true
-    );
-    insert alert;
-
-    // Send notification email
-    sendHighRiskNotification(prediction, alert);
-}
-
-/** Calculate performance prediction based on historical data */
-private static PerformancePrediction calculatePerformancePrediction(
-    List<PerformanceBenchmark__c> historicalMetrics,
+            );
+        insert alert;
+        
+        // Send notification email
+        sendHighRiskNotification(prediction, alert);
+    }
+    
+    /** Calculate performance prediction based on historical data */
+    private static PerformancePrediction calculatePerformancePrediction(
+        List<PerformanceBenchmark__c> historicalMetrics,
     String documentType,
     String region,
     String role
-) {
-    PerformancePrediction prediction = new PerformancePrediction();
-    prediction.documentType = documentType;
-    prediction.region = region;
-    prediction.role = role;
-    prediction.optimizationSuggestions = new List<String>();
-    prediction.performanceFactors = new Map<String, Object>();
-
-    if (historicalMetrics.isEmpty()) {
-        // No historical data - use defaults
-        prediction.predictedProcessingTime = 5000; // 5 seconds default
-        prediction.confidenceLevel = 50;
-        prediction.optimizationSuggestions.add('No historical data available - monitor initial performance');
-        return prediction;
-    }
-
-    // Calculate average processing time
-    Decimal totalTime = 0;
-    Integer successfulRuns = 0;
-    Integer failedRuns = 0;
-
-    for (PerformanceBenchmark__c metric : historicalMetrics) {
-        if (String.isBlank(metric.ErrorMessage__c)) {
-            totalTime += metric.ExecutionTime__c;
-            successfulRuns++;
-        } else {
-            failedRuns++;
+    ) {
+        PerformancePrediction prediction = new PerformancePrediction();
+        prediction.documentType = documentType;
+        prediction.region = region;
+        prediction.role = role;
+        prediction.optimizationSuggestions = new List<String>();
+        prediction.performanceFactors = new Map<String, Object>();
+        
+        if (historicalMetrics.isEmpty()) {
+            // No historical data - use defaults
+            prediction.predictedProcessingTime = 5000; // 5 seconds default
+            prediction.confidenceLevel = 50;
+            prediction.optimizationSuggestions.add('No historical data available - monitor initial performance');
+            return prediction;
         }
-    }
-
-    // Calculate basic statistics
-    if (successfulRuns > 0) {
-        Decimal averageTime = totalTime / successfulRuns;
-        prediction.predictedProcessingTime = averageTime;
-
-        // Adjust confidence based on data consistency
-        List<Decimal> times = new List<Decimal>();
+        
+        // Calculate average processing time
+        Decimal totalTime = 0;
+        Integer successfulRuns = 0;
+        Integer failedRuns = 0;
+        
         for (PerformanceBenchmark__c metric : historicalMetrics) {
             if (String.isBlank(metric.ErrorMessage__c)) {
-                times.add(metric.ExecutionTime__c);
+                totalTime += metric.ExecutionTime__c;
+                successfulRuns++;
+            } else {
+                failedRuns++;
             }
         }
-
-        Decimal standardDeviation = calculateStandardDeviation(times, averageTime);
-        prediction.confidenceLevel = calculateConfidenceLevel(standardDeviation, averageTime, successfulRuns);
-
-        // Generate optimization suggestions
-        if (averageTime > 10000) { // > 10 seconds
-            prediction.optimizationSuggestions.add('Consider implementing caching for frequently used templates');
-            prediction.optimizationSuggestions.add('Optimize clause generation algorithms');
+        
+        // Calculate basic statistics
+        if (successfulRuns > 0) {
+            Decimal averageTime = totalTime / successfulRuns;
+            prediction.predictedProcessingTime = averageTime;
+            
+            // Adjust confidence based on data consistency
+            List<Decimal> times = new List<Decimal>();
+            for (PerformanceBenchmark__c metric : historicalMetrics) {
+                if (String.isBlank(metric.ErrorMessage__c)) {
+                    times.add(metric.ExecutionTime__c);
+                }
+            }
+            
+            Decimal standardDeviation = calculateStandardDeviation(times, averageTime);
+            prediction.confidenceLevel = calculateConfidenceLevel(standardDeviation, averageTime, successfulRuns);
+            
+            // Generate optimization suggestions
+            if (averageTime > 10000) { // > 10 seconds
+                prediction.optimizationSuggestions.add('Consider implementing caching for frequently used templates');
+                prediction.optimizationSuggestions.add('Optimize clause generation algorithms');
+            }
+            if (failedRuns > successfulRuns * 0.1) { // > 10% failure rate
+                prediction.optimizationSuggestions.add('Investigate and resolve recurring processing errors');
+            }
+            if (standardDeviation > averageTime * 0.3) { // High variability
+                prediction.optimizationSuggestions.add('Implement performance consistency improvements');
+            }
+        } else {
+            // All runs failed
+            prediction.predictedProcessingTime = 15000; // Conservative estimate
+            prediction.confidenceLevel = 20;
+            prediction.optimizationSuggestions.add('Address critical system errors causing all processing failures');
         }
-        if (failedRuns > successfulRuns * 0.1) { // > 10% failure rate
-            prediction.optimizationSuggestions.add('Investigate and resolve recurring processing errors');
+        
+        // Store performance factors
+        prediction.performanceFactors.put('averageTime', prediction.predictedProcessingTime);
+        prediction.performanceFactors.put('successRate', successfulRuns * 100.0 / historicalMetrics.size());
+        prediction.performanceFactors.put('sampleSize', historicalMetrics.size());
+        prediction.performanceFactors.put('dataAge', historicalMetrics[0].StartTime__c);
+        
+        return prediction;
+    }
+    
+    /** Calculate standard deviation for performance consistency */
+    private static Decimal calculateStandardDeviation(List<Decimal> values, Decimal mean) {
+        if (values.size() <= 1) return 0;
+        
+        Decimal sumOfSquares = 0;
+        for (Decimal value : values) {
+            Decimal difference = value - mean;
+            sumOfSquares += difference * difference;
         }
-        if (standardDeviation > averageTime * 0.3) { // High variability
-            prediction.optimizationSuggestions.add('Implement performance consistency improvements');
+        return Math.sqrt(sumOfSquares / (values.size() - 1));
+    }
+    private static Decimal calculateConfidenceLevel(Decimal standardDeviation, Decimal mean, Integer sampleSize) {
+        Decimal baseConfidence = 70.0; // Start with base confidence
+        
+        // Reduce confidence for high variability
+        if (mean > 0) {
+            Decimal variabilityRatio = standardDeviation / mean;
+            if (variabilityRatio > 0.5)
+                baseConfidence -= 20;
+            else if (variabilityRatio > 0.3)
+                baseConfidence -= 10;
         }
-    } else {
-        // All runs failed
-        prediction.predictedProcessingTime = 15000; // Conservative estimate
-        prediction.confidenceLevel = 20;
-        prediction.optimizationSuggestions.add('Address critical system errors causing all processing failures');
+        
+        // Increase confidence for larger sample size
+        if (sampleSize > 50)
+            baseConfidence += 15;
+        else if (sampleSize > 20)
+            baseConfidence += 10;
+        else if (sampleSize < 10)
+            baseConfidence -= 15;
+        
+        return Math.min(Math.max(baseConfidence, 20), 95);
     }
-
-    // Store performance factors
-    prediction.performanceFactors.put('averageTime', prediction.predictedProcessingTime);
-    prediction.performanceFactors.put('successRate', successfulRuns * 100.0 / historicalMetrics.size());
-    prediction.performanceFactors.put('sampleSize', historicalMetrics.size());
-    prediction.performanceFactors.put('dataAge', historicalMetrics[0].StartTime__c);
-
-    return prediction;
-}
-
-/** Calculate standard deviation for performance consistency */
-private static Decimal calculateStandardDeviation(List<Decimal> values, Decimal mean) {
-    if (values.size() <= 1) return 0;
-
-    Decimal sumOfSquares = 0;
-    for (Decimal value : values) {
-        Decimal difference = value - mean;
-        sumOfSquares += difference * difference;
-    }
-    return Math.sqrt(sumOfSquares / (values.size() - 1));
-}
-private static Decimal calculateConfidenceLevel(Decimal standardDeviation, Decimal mean, Integer sampleSize) {
-    Decimal baseConfidence = 70.0; // Start with base confidence
-
-    // Reduce confidence for high variability
-    if (mean > 0) {
-        Decimal variabilityRatio = standardDeviation / mean;
-        if (variabilityRatio > 0.5) 
-            baseConfidence -= 20;
-        else if (variabilityRatio > 0.3) 
-            baseConfidence -= 10;
-    }
-
-    // Increase confidence for larger sample size
-    if (sampleSize > 50) 
-        baseConfidence += 15;
-    else if (sampleSize > 20) 
-        baseConfidence += 10;
-    else if (sampleSize < 10) 
-        baseConfidence -= 15;
-
-    return Math.min(Math.max(baseConfidence, 20), 95);
-}
-
-/**
- * Store performance prediction record
- */
-private static void storePredictionRecord(PerformancePrediction prediction) {
-    PerformancePredictionRecord__c record = new PerformancePredictionRecord__c(
-        Document_Type__c = prediction.documentType,
+    
+    /**
+     * Store performance prediction record
+     */
+    private static void storePredictionRecord(PerformancePrediction prediction) {
+        PerformancePredictionRecord__c record = new PerformancePredictionRecord__c(
+            Document_Type__c = prediction.documentType,
         Region__c = prediction.region,
         Role__c = prediction.role,
         Predicted_Time__c = prediction.predictedProcessingTime,
@@ -478,68 +478,68 @@ private static void storePredictionRecord(PerformancePrediction prediction) {
         Performance_Factors__c = JSON.serialize(prediction.performanceFactors),
         Prediction_Date__c = DateTime.now(),
         Status__c = 'ACTIVE'
-    );
-    insert record;
-}
-
-/**
- * Get compliance manager for high-risk alerts
- */
-private static String getComplianceManagerId() {
-    List<User> complianceManagers = [
+            );
+        insert record;
+    }
+    
+    /**
+     * Get compliance manager for high-risk alerts
+     */
+    private static String getComplianceManagerId() {
+        List<User> complianceManagers = [
         SELECT Id 
         FROM User 
         WHERE Profile.Name LIKE '%Compliance%' AND IsActive = true 
         LIMIT 1
     ];
-    return complianceManagers.isEmpty() ? UserInfo.getUserId() : complianceManagers[0].Id;
-}
-
-/**
- * Send high-risk notification email
- */
-private static void sendHighRiskNotification(ComplianceRiskPrediction prediction, SLAViolationAlert__c alert) {
-    try {
-        Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
-        mail.setToAddresses(new String[]{ getComplianceManagerEmail() });
-        mail.setSubject('HIGH RISK: Compliance Risk Detected - Document ' + prediction.documentId);
-
-        String emailBody = 
-            'A high compliance risk has been detected for document: ' + prediction.documentId + '\n\n' +
-            'Risk Score: ' + prediction.riskScore + '/100 (' + prediction.riskLevel + ')\n' +
-            'Document Type: ' + prediction.documentType + '\n' +
-            'Region: ' + prediction.region + '\n\n' +
-            'Predicted Violations:\n- ' + String.join(prediction.predictedViolations, '\n- ') + '\n\n' +
-            'Recommendations:\n- ' + String.join(prediction.recommendations, '\n- ') + '\n\n' +
-            'Please review this document immediately and take appropriate action.\n\n' +
-            'Alert ID: ' + alert.Id;
-
-        mail.setPlainTextBody(emailBody);
-        Messaging.sendEmail(new Messaging.SingleEmailMessage[]{ mail });
-    } catch (Exception e) {
-        System.debug('Error sending risk notification: ' + e.getMessage());
+        return complianceManagers.isEmpty() ? UserInfo.getUserId() : complianceManagers[0].Id;
     }
-}
-
-/**
- * Get compliance manager email
- */
-private static String getComplianceManagerEmail() {
-    List<User> complianceManagers = [
+    
+    /**
+     * Send high-risk notification email
+     */
+    private static void sendHighRiskNotification(ComplianceRiskPrediction prediction, SLAViolationAlert__c alert) {
+        try {
+            Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
+            mail.setToAddresses(new String[]{ getComplianceManagerEmail() });
+            mail.setSubject('HIGH RISK: Compliance Risk Detected - Document ' + prediction.documentId);
+            
+            String emailBody =
+                'A high compliance risk has been detected for document: ' + prediction.documentId + '\n\n' +
+                'Risk Score: ' + prediction.riskScore + '/100 (' + prediction.riskLevel + ')\n' +
+                'Document Type: ' + prediction.documentType + '\n' +
+                'Region: ' + prediction.region + '\n\n' +
+                'Predicted Violations:\n- ' + String.join(prediction.predictedViolations, '\n- ') + '\n\n' +
+                'Recommendations:\n- ' + String.join(prediction.recommendations, '\n- ') + '\n\n' +
+                'Please review this document immediately and take appropriate action.\n\n' +
+                'Alert ID: ' + alert.Id;
+            
+            mail.setPlainTextBody(emailBody);
+            Messaging.sendEmail(new Messaging.SingleEmailMessage[]{ mail });
+        } catch (Exception e) {
+            System.debug('Error sending risk notification: ' + e.getMessage());
+        }
+    }
+    
+    /**
+     * Get compliance manager email
+     */
+    private static String getComplianceManagerEmail() {
+        List<User> complianceManagers = [
         SELECT Email 
         FROM User 
         WHERE Profile.Name LIKE '%Compliance%' AND IsActive = true 
         LIMIT 1
     ];
-    return complianceManagers.isEmpty() ? UserInfo.getUserEmail() : complianceManagers[0].Email;
-}
-
-/**
- * Create prediction error audit
- */
-private static void createPredictionErrorAudit(String recordId, String predictionType, String errorMessage) {
-    AuditTrail__c errorAudit = new AuditTrail__c(
-        RecordId__c      = recordId,
+        return complianceManagers.isEmpty() ? UserInfo.getUserEmail() : complianceManagers[0].Email;
+    }
+    
+    /**
+     * Create prediction error audit
+     */
+    private static void createPredictionErrorAudit(String recordId, String predictionType, String errorMessage) {
+        AuditTrail__c errorAudit = new AuditTrail__c(
+            RecordId__c      = recordId,
         Action__c        = predictionType + '_ERROR',
         Status__c        = 'ERROR',
         Timestamp__c     = DateTime.now(),
@@ -547,6 +547,6 @@ private static void createPredictionErrorAudit(String recordId, String predictio
         SystemInfo__c    = 'Predictive Analytics Engine',
         AdditionalInfo__c= errorMessage,
         Error_Code__c    = 'PREDICTION_ERROR'
-    );
-    insert errorAudit;
-}
+            );
+        insert errorAudit;
+    }

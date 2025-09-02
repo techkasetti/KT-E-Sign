@@ -1,7 +1,6 @@
 <!-- Developer_build_step_by_step_impl_e_sign v4.......................................................... -->
 
 
-
 <!-- <template>
     <lightning-card title="Real-Time Security Dashboard" icon-name="utility:shield">
         <div slot="actions">
@@ -137,6 +136,7 @@
                             </template>
                         </lightning-card>
                     </div>
+
                     <div class="slds-col slds-size_1-of-2">
                         <lightning-card title="Recent Security Alerts" icon-name="utility:notification">
                             <template if:true={recentAlerts.length}>
@@ -166,174 +166,32 @@
                                 <div class="no-data-message slds-text-align_center slds-p-around_large">
                                     <p>No recent security alerts</p>
                                 </div>
-                    <div class="no-data-message slds-text-align_center slds-p-around_large">
-                        <p>No recent security alerts</p>
-                    </div>
-                </template>
-            </lightning-card>
-        </div>
-    </div>
-
-    <div class="analytics-section slds-grid slds-wrap slds-gutters_small">
-        <div class="slds-col slds-size_1-of-1">
-            <lightning-card title="Security Analytics" icon-name="utility:analytics">
-                <div class="analytics-container">
-                    <div class="slds-tabs_default">
-                        <ul class="slds-tabs_default__nav" role="tablist">
-                            <li class="slds-tabs_default__item slds-is-active" title="User Activity" role="presentation">
-                                <a class="slds-tabs_default__link" href="#" role="tab" tabindex="0" aria-selected="true" aria-controls="tab-user-activity" id="tab-user-activity__item">User Activity</a>
-                            </li>
-                            <li class="slds-tabs_default__item" title="Network Analysis" role="presentation">
-                                <a class="slds-tabs_default__link" href="#" role="tab" tabindex="-1" aria-selected="false" aria-controls="tab-network-analysis" id="tab-network-analysis__item">Network Analysis</a>
-                            </li>
-                            <li class="slds-tabs_default__item" title="Compliance Status" role="presentation">
-                                <a class="slds-tabs_default__link" href="#" role="tab" tabindex="-1" aria-selected="false" aria-controls="tab-compliance-status" id="tab-compliance-status__item">Compliance</a>
-                            </li>
-                        </ul>
-                        
-                        <div id="tab-user-activity" class="slds-tabs_default__content slds-show" role="tabpanel" aria-labelledby="tab-user-activity__item">
-                            <div class="user-activity-analytics">
-                                <div class="slds-grid slds-wrap slds-gutters">
-                                    <div class="slds-col slds-size_1-of-3">
-                                        <div class="activity-metric">
-                                            <h4 class="metric-title">Active Users</h4>
-                                            <div class="metric-number">{threatMetrics.activeUsers}</div>
-                                            <div class="metric-trend positive">+5% vs yesterday</div>
-                                        </div>
-                                    </div>
-                                    <div class="slds-col slds-size_1-of-3">
-                                        <div class="activity-metric">
-                                            <h4 class="metric-title">Suspicious Activities</h4>
-                                            <div class="metric-number">{threatMetrics.suspiciousActivities}</div>
-                                            <div class="metric-trend negative">+12% vs yesterday</div>
-                                        </div>
-                                    </div>
-                                    <div class="slds-col slds-size_1-of-3">
-                                        <div class="activity-metric">
-                                            <h4 class="metric-title">Blocked Attempts</h4>
-                                            <div class="metric-number">{threatMetrics.blockedAttempts}</div>
-                                            <div class="metric-trend neutral">No change</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="activity-chart slds-m-top_large">
-                                    <template if:true={userActivityData.length}>
-                                        <c-user-activity-chart data={userActivityData}></c-user-activity-chart>
-                                    </template>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div id="tab-network-analysis" class="slds-tabs_default__content slds-hide" role="tabpanel" aria-labelledby="tab-network-analysis__item">
-                            <div class="network-analysis">
-                                <div class="slds-grid slds-wrap slds-gutters">
-                                    <div class="slds-col slds-size_1-of-2">
-                                        <div class="network-threats">
-                                            <h4 class="slds-text-heading_small">IP Reputation Analysis</h4>
-                                            <template if:true={threatMetrics.ipThreats}>
-                                                <template for:each={threatMetrics.ipThreats} for:item="threat">
-                                                    <div key={threat.ip} class="ip-threat-item slds-box slds-m-bottom_small">
-                                                        <div class="slds-grid">
-                                                            <div class="slds-col slds-size_2-of-3">
-                                                                <strong>{threat.ip}</strong>
-                                                                <p>{threat.threatType}</p>
-                                                            </div>
-                                                            <div class="slds-col slds-size_1-of-3">
-                                                                <lightning-badge label={threat.riskLevel} variant={threat.badgeVariant}></lightning-badge>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </template>
-                                            </template>
-                                        </div>
-                                    </div>
-                                    <div class="slds-col slds-size_1-of-2">
-                                        <div class="geo-analysis">
-                                            <h4 class="slds-text-heading_small">Geographic Distribution</h4>
-                                            <template if:true={threatMetrics.geoData}>
-                                                <c-geographic-threat-map data={threatMetrics.geoData}></c-geographic-threat-map>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div id="tab-compliance-status" class="slds-tabs_default__content slds-hide" role="tabpanel" aria-labelledby="tab-compliance-status__item">
-                            <div class="compliance-analysis">
-                                <div class="compliance-overview slds-grid slds-wrap slds-gutters">
-                                    <div class="slds-col slds-size_1-of-4">
-                                        <div class="compliance-score-card">
-                                            <div class="score-circle">
-                                                <c-circular-progress 
-                                                    value={threatMetrics.complianceScore} 
-                                                    label="Compliance Score"
-                                                    variant="success">
-                                                </c-circular-progress>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="slds-col slds-size_3-of-4">
-                                        <div class="compliance-details">
-                                            <h4 class="slds-text-heading_small">Compliance Status</h4>
-                                            <template if:true={threatMetrics.complianceDetails}>
-                                                <template for:each={threatMetrics.complianceDetails} for:item="detail">
-                                                    <div key={detail.standard} class="compliance-item slds-grid slds-grid_align-spread slds-p-vertical_x-small">
-                                                        <div class="compliance-standard">
-                                                            <strong>{detail.standard}</strong>
-                                                        </div>
-                                                        <div class="compliance-status">
-                                                            <lightning-badge 
-                                                                label={detail.status} 
-                                                                variant={detail.statusVariant}>
-                                                            </lightning-badge>
-                                                        </div>
-                                                    </div>
-                                                </template>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="compliance-violations slds-m-top_large">
-                                    <h4 class="slds-text-heading_small">Recent Violations</h4>
-                                    <template if:true={threatMetrics.complianceViolations.length}>
-                                        <lightning-datatable
-                                            key-field="id"
-                                            data={threatMetrics.complianceViolations}
-                                            columns={complianceColumns}
-                                            hide-checkbox-column>
-                                        </lightning-datatable>
-                                    </template>
-                                    <template if:false={threatMetrics.complianceViolations.length}>
-                                        <div class="no-violations slds-text-align_center slds-p-around_large">
-                                            <lightning-icon icon-name="utility:success" variant="success" size="large"></lightning-icon>
-                                            <p class="slds-m-top_medium">No recent compliance violations</p>
-                                        </div>
-                                    </template>
-                                </div>
-                            </div>
-                        </div>
+                            </template>
+                        </lightning-card>
                     </div>
                 </div>
-            </lightning-card>
-        </div>
-    </div>
-</template>
 
-<template if:true={error}>
-    <div class="error-container slds-text-align_center slds-p-around_large">
-        <lightning-icon icon-name="utility:error" variant="error" size="large"></lightning-icon>
-        <h3 class="slds-text-heading_medium slds-m-top_medium">Dashboard Error</h3>
-        <p class="slds-m-top_small">{error.body.message}</p>
-        <lightning-button 
-            label="Retry" 
-            variant="brand" 
-            onclick={handleRefresh} 
-            class="slds-m-top_medium">
-        </lightning-button>
-    </div>
-</template>
-</template>
-</lightning-card> -->
+                <div class="analytics-section slds-grid slds-wrap slds-gutters_small">
+                    <div class="slds-col slds-size_1-of-1">
+                        <lightning-card title="Security Analytics" icon-name="utility:analytics">
+                        </lightning-card>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </lightning-card>
+
+    <template if:true={error}>
+        <div class="error-container slds-text-align_center slds-p-around_large">
+            <lightning-icon icon-name="utility:error" variant="error" size="large"></lightning-icon>
+            <h3 class="slds-text-heading_medium slds-m-top_medium">Dashboard Error</h3>
+            <p class="slds-m-top_small">{error.body.message}</p>
+            <lightning-button 
+                label="Retry" 
+                variant="brand" 
+                onclick={handleRefresh} 
+                class="slds-m-top_medium">
+            </lightning-button>
+        </div>
+    </template>
+</template> -->

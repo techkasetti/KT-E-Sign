@@ -11,7 +11,7 @@ public class PerformanceMonitor {
     public static void startTracking(String operationName) {
         startTimes.put(operationName, System.currentTimeMillis());
     }
-
+    
     
     // End performance tracking and log results
     public static void endTracking(String operationType, String recordId) {
@@ -37,8 +37,8 @@ public class PerformanceMonitor {
         startTimes.remove(trackingKey);
         heapSizes.remove(trackingKey);
     }
-
-        public static void endTracking(String operationName) {
+    
+    public static void endTracking(String operationName) {
         Long startTime = startTimes.get(operationName);
         if (startTime != null) {
             Long executionTime = System.currentTimeMillis() - startTime;
@@ -46,10 +46,10 @@ public class PerformanceMonitor {
             // Create performance benchmark record
             PerformanceBenchmark__c benchmark = new PerformanceBenchmark__c(
                 OperationType__c = operationName,
-                ExecutionTime__c = executionTime,
-                Timestamp__c = System.now(),
-                UserId__c = UserInfo.getUserId()
-            );
+            ExecutionTime__c = executionTime,
+            Timestamp__c = System.now(),
+            UserId__c = UserInfo.getUserId()
+                );
             
             insert benchmark;
             
@@ -59,7 +59,7 @@ public class PerformanceMonitor {
             startTimes.remove(operationName);
         }
     }
-
+    
     
     // End tracking with error
     public static void endTrackingWithError(String operationType, String recordId, String errorMessage) {
@@ -85,39 +85,39 @@ public class PerformanceMonitor {
         heapSizes.remove(trackingKey);
     }
     
-
-        public static void endTrackingWithError(String operationName, String recordId, String errorMessage) {
+    
+    public static void endTrackingWithError(String operationName, String recordId, String errorMessage) {
         Long startTime = startTimes.get(operationName);
         if (startTime != null) {
             Long executionTime = System.currentTimeMillis() - startTime;
             
             PerformanceBenchmark__c benchmark = new PerformanceBenchmark__c(
                 OperationType__c = operationName,
-                ExecutionTime__c = executionTime,
-                Timestamp__c = System.now(),
-                UserId__c = UserInfo.getUserId(),
-                RecordId__c = recordId,
-                ErrorMessage__c = errorMessage
-            );
+            ExecutionTime__c = executionTime,
+            Timestamp__c = System.now(),
+            UserId__c = UserInfo.getUserId(),
+            RecordId__c = recordId,
+            ErrorMessage__c = errorMessage
+                );
             
             insert benchmark;
             
             startTimes.remove(operationName);
         }
     }
-
+    
     private static void logPerformanceBenchmark(String operationType, String recordId, DateTime startTime, DateTime endTime, Long executionTime, Long memoryUsage, String errorMessage) {
         try {
             PerformanceBenchmark__c benchmark = new PerformanceBenchmark__c(
                 OperationType__c = operationType,
-                RecordId__c = recordId,
-                StartTime__c = startTime,
-                EndTime__c = endTime,
-                ExecutionTime__c = executionTime,
-                MemoryUsage__c = memoryUsage / 1024, // Convert to KB
-                UserId__c = UserInfo.getUserId(),
-                ErrorMessage__c = errorMessage
-            );
+            RecordId__c = recordId,
+            StartTime__c = startTime,
+            EndTime__c = endTime,
+            ExecutionTime__c = executionTime,
+            MemoryUsage__c = memoryUsage / 1024, // Convert to KB
+            UserId__c = UserInfo.getUserId(),
+            ErrorMessage__c = errorMessage
+                );
             
             insert benchmark;
             
@@ -149,13 +149,13 @@ public class PerformanceMonitor {
         try {
             SLAViolationAlert__c alert = new SLAViolationAlert__c(
                 BenchmarkId__c = benchmark.Id,
-                OperationType__c = benchmark.OperationType__c,
-                ActualTime__c = benchmark.ExecutionTime__c,
-                ThresholdTime__c = threshold,
-                ExcessTime__c = benchmark.ExecutionTime__c - threshold,
-                Severity__c = calculateSeverity(benchmark.ExecutionTime__c, threshold),
-                AlertDate__c = System.now()
-            );
+            OperationType__c = benchmark.OperationType__c,
+            ActualTime__c = benchmark.ExecutionTime__c,
+            ThresholdTime__c = threshold,
+            ExcessTime__c = benchmark.ExecutionTime__c - threshold,
+            Severity__c = calculateSeverity(benchmark.ExecutionTime__c, threshold),
+            AlertDate__c = System.now()
+                );
             
             insert alert;
             
@@ -179,8 +179,8 @@ public class PerformanceMonitor {
     
     private static void sendCriticalAlert(SLAViolationAlert__c alert) {
         // Implementation for sending critical alerts
-        System.debug(LoggingLevel.WARN, 'CRITICAL SLA Violation: ' + alert.OperationType__c + 
-                    ' took ' + alert.ActualTime__c + 'ms (threshold: ' + alert.ThresholdTime__c + 'ms)');
+        System.debug(LoggingLevel.WARN, 'CRITICAL SLA Violation: ' + alert.OperationType__c +
+            ' took ' + alert.ActualTime__c + 'ms (threshold: ' + alert.ThresholdTime__c + 'ms)');
     }
     
     // Batch performance analysis
@@ -208,14 +208,14 @@ public class PerformanceMonitor {
             // Create performance trend record
             PerformanceTrend__c trendRecord = new PerformanceTrend__c(
                 OperationType__c = operationType,
-                AnalysisDate__c = Date.today(),
-                AverageTime__c = avgTime,
-                MaxTime__c = maxTime,
-                MinTime__c = minTime,
-                TotalOperations__c = totalOps,
-                UniqueRecords__c = uniqueRecords,
-                PerformanceGrade__c = calculatePerformanceGrade(avgTime, operationType)
-            );
+            AnalysisDate__c = Date.today(),
+            AverageTime__c = avgTime,
+            MaxTime__c = maxTime,
+            MinTime__c = minTime,
+            TotalOperations__c = totalOps,
+            UniqueRecords__c = uniqueRecords,
+            PerformanceGrade__c = calculatePerformanceGrade(avgTime, operationType)
+                );
             
             insert trendRecord;
         }
@@ -256,9 +256,9 @@ public class PerformanceMonitor {
             throw e;
         }
     }
-    */
-
-        @AuraEnabled(cacheable=true)
+     */
+    
+    @AuraEnabled(cacheable=true)
     public static List<PerformanceBenchmark__c> getPerformanceMetrics() {
         return [
             SELECT Id, OperationType__c, ExecutionTime__c, Timestamp__c, ErrorMessage__c
@@ -268,7 +268,7 @@ public class PerformanceMonitor {
             LIMIT 100
         ];
     }
-        @AuraEnabled(cacheable=true)
+    @AuraEnabled(cacheable=true)
     public static Map<String, Object> getPerformanceSummary() {
         List<AggregateResult> results = [
             SELECT OperationType__c, AVG(ExecutionTime__c) avgTime, 
@@ -290,6 +290,6 @@ public class PerformanceMonitor {
         
         return summary;
     }
-
-
+    
+    
 }

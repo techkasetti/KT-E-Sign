@@ -63,18 +63,11 @@ public class ZeroTrustSecurityManager {
                 return requireAdditionalAuthentication(userId, documentId, context);
             }
             
-            return true;
-        } catch (Exception e) {
-            logSecurityEvent('SECURITY_VALIDATION_ERROR', userId, documentId, context);
-            return false;
-        }
-    }
-}
             // All checks passed - grant access
             logSecurityEvent('ACCESS_GRANTED', userId, documentId, context);
             updateLastVerification(userId, context);
             return true;
-
+            
         } catch (Exception e) {
             logSecurityEvent('SECURITY_VALIDATION_ERROR', userId, documentId, context);
             System.debug('Security validation error: ' + e.getMessage());
@@ -96,18 +89,18 @@ public class ZeroTrustSecurityManager {
                 AND LastModifiedDate >= :DateTime.now().addHours(-8)
                 LIMIT 1
             ];
-
+            
             if (activeSessions.isEmpty()) {
                 return false;
             }
-
+            
             // Verify session hasn't been compromised
             AuthSession session = activeSessions[0];
             if (isSessionCompromised(session, context)) {
                 invalidateSession(session.Id);
                 return false;
             }
-
+            
             // Check for concurrent sessions from different locations
             List<AuthSession> concurrentSessions = [
                 SELECT Id, SourceIp, LoginGeoId
@@ -116,13 +109,13 @@ public class ZeroTrustSecurityManager {
                 AND Id != :context.sessionId
                 AND LastModifiedDate >= :DateTime.now().addMinutes(-30)
             ];
-
+            
             if (detectSuspiciousConcurrentAccess(concurrentSessions, context)) {
                 return false;
             }
-
+            
             return true;
-
+            
         } catch (Exception e) {
             System.debug('Identity verification error: ' + e.getMessage());
             return false;
@@ -143,20 +136,20 @@ public class ZeroTrustSecurityManager {
                 AND Is_Active__c = true
                 LIMIT 1
             ];
-
+            
             if (trustedDevices.isEmpty()) {
                 // New device - create pending trust record
                 createPendingDeviceVerification(deviceId, userId);
                 return false; // Require additional verification for new devices
             }
-
+            
             TrustedDevice__c device = trustedDevices[0];
-
+            
             // Check device trust level
             if (device.Trust_Level__c == 'BLOCKED' || device.Risk_Score__c > 70) {
                 return false;
             }
-
+            
             // Verify device hasn't been inactive too long
             if (device.Last_Verified__c < DateTime.now().addDays(-30)) {
                 // Device trust expired - require re-verification
@@ -164,13 +157,13 @@ public class ZeroTrustSecurityManager {
                 update device;
                 return false;
             }
-
+            
             // Update last verification timestamp
             device.Last_Verified__c = DateTime.now();
             update device;
-
+            
             return device.Trust_Level__c == 'TRUSTED';
-
+            
         } catch (Exception e) {
             System.debug('Device trust verification error: ' + e.getMessage());
             return false;
@@ -188,23 +181,23 @@ public class ZeroTrustSecurityManager {
                 FROM BlockedIPRange__c
                 WHERE Is_Active__c = true
             ];
-
+            
             if (isIPBlocked(ipAddress, blockedRanges)) {
                 return false;
             }
-
+            
             // Check for suspicious geographic access patterns
             if (String.isNotBlank(geoLocation) && isSuspiciousGeographicAccess(geoLocation)) {
                 return false;
             }
-
+            
             // Check for VPN/Proxy usage if restricted
             if (isRestrictedVPNAccess(ipAddress)) {
                 return false;
             }
-
+            
             return true;
-
+            
         } catch (Exception e) {
             System.debug('Network security validation error: ' + e.getMessage());
             return false;
@@ -227,16 +220,16 @@ public class ZeroTrustSecurityManager {
                 ORDER BY Created_Date__c DESC
                 LIMIT 10
             ];
-
+            
             if (recentBehavior.isEmpty()) {
                 // New user - create baseline behavior profile
                 createBehaviorBaseline(userId, context);
                 return true; // Allow access but monitor closely
             }
-
+            
             // Calculate behavior deviation score
             Decimal deviationScore = calculateBehaviorDeviation(recentBehavior, context);
-
+            
             // Check if behavior is anomalous
             if (deviationScore > 75) {
                 // High deviation - possible account compromise
@@ -245,11 +238,11 @@ public class ZeroTrustSecurityManager {
                 // Medium deviation - require additional verification
                 return requireBehaviorVerification(userId, context);
             }
-
+            
             // Update behavior metrics
             updateBehaviorMetrics(userId, context, deviationScore);
             return true;
-
+            
         } catch (Exception e) {
             System.debug('Behavior analysis error: ' + e.getMessage());
             return true; // Allow access but log error
@@ -269,13 +262,13 @@ public class ZeroTrustSecurityManager {
                 WHERE Id = :documentId
                 LIMIT 1
             ];
-
+            
             // Check user's permission level
             String requiredPermission = getRequiredPermission(document);
             if (!permissions.contains(requiredPermission)) {
                 return false;
             }
-
+            
             // Check document-specific access controls
             List<DocumentAccessControl__c> accessControls = [
                 SELECT User_Id__c, Permission_Type__c, Expiry_Date__c, Is_Active__c
@@ -285,12 +278,12 @@ public class ZeroTrustSecurityManager {
                 AND Is_Active__c = true
                 AND (Expiry_Date__c = null OR Expiry_Date__c >= :Date.today())
             ];
-
+            
             // If specific access controls exist, validate against them
             if (!accessControls.isEmpty()) {
                 Boolean hasValidAccess = false;
                 for (DocumentAccessControl__c control : accessControls) {
-                    if (control.Permission_Type__c == 'FULL_ACCESS' || 
+                    if (control.Permission_Type__c == 'FULL_ACCESS' ||
                         control.Permission_Type__c == 'READ_ACCESS') {
                         hasValidAccess = true;
                         break;
@@ -298,14 +291,14 @@ public class ZeroTrustSecurityManager {
                 }
                 return hasValidAccess;
             }
-
+            
             // Check time-based access restrictions
             if (!isWithinAllowedAccessHours(document)) {
                 return false;
             }
-
+            
             return true;
-
+            
         } catch (Exception e) {
             System.debug('Permission validation error: ' + e.getMessage());
             return false;
@@ -317,14 +310,14 @@ public class ZeroTrustSecurityManager {
      */
     private static String calculateDynamicRisk(String userId, String documentId, SecurityContext context) {
         Decimal riskScore = 0;
-
+        
         try {
             // Factor 1: User risk profile (30% weight)
             UserSecurityProfile__c userProfile = getUserSecurityProfile(userId);
             if (userProfile != null) {
                 riskScore += userProfile.Risk_Score__c * 0.3;
             }
-
+            
             // Factor 2: Document sensitivity (25% weight)
             DocumentLifecycleConfiguration__c document = [
                 SELECT Security_Classification__c, ComplianceScore__c
@@ -344,28 +337,28 @@ public class ZeroTrustSecurityManager {
             if (docRisk != null) {
                 riskScore += docRisk * 0.25;
             }
-
+            
             // Factor 3: Access context (20% weight)
             Decimal contextRisk = calculateContextRisk(context);
             riskScore += contextRisk * 0.20;
-
+            
             // Factor 4: Recent security incidents (15% weight)
             Integer recentIncidents = getRecentSecurityIncidents(userId);
             riskScore += Math.min(recentIncidents * 10, 50) * 0.15;
-
+            
             // Factor 5: Compliance history (10% weight)
             if (document.ComplianceScore__c != null) {
                 riskScore += (100 - document.ComplianceScore__c) * 0.10;
             }
-
+            
             // Normalize risk score
             riskScore = Math.min(riskScore, 100);
-
+            
         } catch (Exception e) {
             System.debug('Risk calculation error: ' + e.getMessage());
             riskScore = 50; // Default moderate risk
         }
-
+        
         // Determine risk level
         if (riskScore >= 80) return 'CRITICAL';
         if (riskScore >= 60) return 'HIGH';
@@ -392,13 +385,13 @@ public class ZeroTrustSecurityManager {
                 Device_Id__c = context.deviceId
             );
             insert challenge;
-
+            
             // Send MFA challenge to user
             sendMFAChallenge(userId, challenge.Challenge_Code__c);
-
+            
             // Log security event
             logSecurityEvent('MFA_CHALLENGE_SENT', userId, documentId, context);
-
+            
             return false; // Access denied until MFA completed
             
         } catch (Exception e) {
@@ -422,23 +415,23 @@ public class ZeroTrustSecurityManager {
                 AND Expiry_Time__c >= :DateTime.now()
                 LIMIT 1
             ];
-
+            
             if (challenges.isEmpty()) {
                 return false; // No valid challenge found
             }
-
+            
             MFAChallenge__c challenge = challenges[0];
-
+            
             // Check attempt count
             if (challenge.Attempt_Count__c >= MAX_FAILED_ATTEMPTS) {
                 challenge.Status__c = 'FAILED';
                 update challenge;
                 return false;
             }
-
+            
             // Validate response
             Boolean isValid = validateChallengeResponse(challenge.Challenge_Code__c, response);
-
+            
             // Update challenge record
             challenge.Attempt_Count__c = (challenge.Attempt_Count__c != null ? challenge.Attempt_Count__c : 0) + 1;
             
@@ -452,9 +445,9 @@ public class ZeroTrustSecurityManager {
             }
             
             update challenge;
-
+            
             return isValid;
-
+            
         } catch (Exception e) {
             System.debug('MFA validation error: ' + e.getMessage());
             return false;
@@ -481,12 +474,12 @@ public class ZeroTrustSecurityManager {
                 Geographic_Location__c = context?.geoLocation
             );
             insert securityEvent;
-
+            
             // Create real-time alert for critical events
             if (eventType.contains('FAILED') || eventType.contains('ANOMALOUS') || eventType.contains('SUSPICIOUS')) {
                 createSecurityAlert(eventType, userId, documentId, context);
             }
-
+            
         } catch (Exception e) {
             System.debug('Security event logging error: ' + e.getMessage());
         }
@@ -508,309 +501,301 @@ public class ZeroTrustSecurityManager {
                 Auto_Generated__c = true
             );
             insert alert;
-// Send immediate notification for critical events
-if (alert.Severity__c == 'CRITICAL' || alert.Severity__c == 'HIGH') {
-    sendSecurityIncidentNotification(alert, userId, documentId, context);
-}
-} catch (Exception e) {
-    System.debug('Security alert creation error: ' + e.getMessage());
-}
-}
-
-/**
- * Send immediate security incident notification
- */
-private static void sendSecurityIncidentNotification(
-    SLAViolationAlert__c alert,
-    String userId,
-    String documentId,
-    SecurityContext context
-) {
-    try {
-        // Get security team members
-        List<User> securityTeam = [
-            SELECT Id, Email, Name
-            FROM User
-            WHERE (Profile.Name LIKE '%Security%' OR Profile.Name LIKE '%System Administrator%')
-            AND IsActive = true
-            LIMIT 5
-        ];
-
-        if (securityTeam.isEmpty()) {
-            return;
+            
+            // Send immediate notification for critical events
+            if (alert.Severity__c == 'CRITICAL' || alert.Severity__c == 'HIGH') {
+                sendSecurityIncidentNotification(alert, userId, documentId, context);
+            }
+        } catch (Exception e) {
+            System.debug('Security alert creation error: ' + e.getMessage());
         }
-
-        // Get user details for context
-        User targetUser = [
-            SELECT Name, Email, Profile.Name
-            FROM User
-            WHERE Id = :userId
-            LIMIT 1
-        ];
-
-        // Prepare notification
-        List<Messaging.SingleEmailMessage> emails = new List<Messaging.SingleEmailMessage>();
-
-        for (User securityMember : securityTeam) {
-            Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
-            mail.setToAddresses(new String[] { securityMember.Email });
-            mail.setSubject('SECURITY ALERT: ' + alert.Alert_Type__c + ' - ' + alert.Severity__c);
-
-            String emailBody = buildSecurityNotificationBody(alert, targetUser, documentId, context);
-            mail.setPlainTextBody(emailBody);
-            mail.setHtmlBody(buildSecurityNotificationHTML(alert, targetUser, documentId, context));
-
-            emails.add(mail);
-        }
-
-        // Send notifications
-        if (!emails.isEmpty()) {
-            Messaging.sendEmail(emails);
-        }
-
-    } catch (Exception e) {
-        System.debug('Security notification error: ' + e.getMessage());
-    }
-}
-
-/**
- * Build detailed security notification body
- */
-private static String buildSecurityNotificationBody(
-    SLAViolationAlert__c alert,
-    User targetUser,
-    String documentId,
-    SecurityContext context
-) {
-    StringBuilder body = new StringBuilder();
-
-    body.append('SECURITY INCIDENT DETECTED\n');
-    body.append('========================\n\n');
-
-    body.append('Alert Type: ').append(alert.Alert_Type__c).append('\n');
-    body.append('Severity: ').append(alert.Severity__c).append('\n');
-    body.append('Timestamp: ').append(alert.Timestamp__c.format()).append('\n\n');
-
-    body.append('USER DETAILS:\n');
-    body.append('Name: ').append(targetUser.Name).append('\n');
-    body.append('Email: ').append(targetUser.Email).append('\n');
-    body.append('Profile: ').append(targetUser.Profile.Name).append('\n\n');
-
-    body.append('ACCESS CONTEXT:\n');
-    if (context != null) {
-        body.append('Session ID: ').append(context.sessionId).append('\n');
-        body.append('Device ID: ').append(context.deviceId).append('\n');
-        body.append('IP Address: ').append(context.ipAddress).append('\n');
-        body.append('Geographic Location: ').append(context.geoLocation).append('\n');
-        body.append('User Agent: ').append(context.userAgent).append('\n');
     }
 
-    body.append('Document ID: ').append(documentId).append('\n\n');
+    /**
+     * Send immediate security incident notification
+     */
+    private static void sendSecurityIncidentNotification(SLAViolationAlert__c alert, String userId, String documentId, SecurityContext context) {
+        try {
+            // Get security team members
+            List<User> securityTeam = [
+                SELECT Id, Email, Name
+                FROM User
+                WHERE (Profile.Name LIKE '%Security%' OR Profile.Name LIKE '%System Administrator%')
+                AND IsActive = true
+                LIMIT 5
+            ];
+            
+            if (securityTeam.isEmpty()) {
+                return;
+            }
+            
+            // Get user details for context
+            User targetUser = [
+                SELECT Name, Email, Profile.Name
+                FROM User
+                WHERE Id = :userId
+                LIMIT 1
+            ];
+            
+            // Prepare notification
+            List<Messaging.SingleEmailMessage> emails = new List<Messaging.SingleEmailMessage>();
+            
+            for (User securityMember : securityTeam) {
+                Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
+                mail.setToAddresses(new String[] { securityMember.Email });
+                mail.setSubject('SECURITY ALERT: ' + alert.Alert_Type__c + ' - ' + alert.Severity__c);
+                
+                String emailBody = buildSecurityNotificationBody(alert, targetUser, documentId, context);
+                mail.setPlainTextBody(emailBody);
+                mail.setHtmlBody(buildSecurityNotificationHTML(alert, targetUser, documentId, context));
+                
+                emails.add(mail);
+            }
+            
+            // Send notifications
+            if (!emails.isEmpty()) {
+                Messaging.sendEmail(emails);
+            }
+            
+        } catch (Exception e) {
+            System.debug('Security notification error: ' + e.getMessage());
+        }
+    }
 
-    body.append('INCIDENT DETAILS:\n');
-    body.append(alert.Message__c).append('\n\n');
+    /**
+     * Build detailed security notification body
+     */
+    private static String buildSecurityNotificationBody(SLAViolationAlert__c alert, User targetUser, String documentId, SecurityContext context) {
+        StringBuilder body = new StringBuilder();
+        
+        body.append('SECURITY INCIDENT DETECTED\n');
+        body.append('========================\n\n');
+        
+        body.append('Alert Type: ').append(alert.Alert_Type__c).append('\n');
+        body.append('Severity: ').append(alert.Severity__c).append('\n');
+        body.append('Timestamp: ').append(alert.Timestamp__c.format()).append('\n\n');
+        
+        body.append('USER DETAILS:\n');
+        body.append('Name: ').append(targetUser.Name).append('\n');
+        body.append('Email: ').append(targetUser.Email).append('\n');
+        body.append('Profile: ').append(targetUser.Profile.Name).append('\n\n');
+        
+        body.append('ACCESS CONTEXT:\n');
+        if (context != null) {
+            body.append('Session ID: ').append(context.sessionId).append('\n');
+            body.append('Device ID: ').append(context.deviceId).append('\n');
+            body.append('IP Address: ').append(context.ipAddress).append('\n');
+            body.append('Geographic Location: ').append(context.geoLocation).append('\n');
+            body.append('User Agent: ').append(context.userAgent).append('\n');
+        }
+        
+        body.append('Document ID: ').append(documentId).append('\n\n');
+        
+        body.append('INCIDENT DETAILS:\n');
+        body.append(alert.Message__c).append('\n\n');
+        
+        body.append('IMMEDIATE ACTIONS REQUIRED:\n');
+        body.append('1. Review user access logs\n');
+        body.append('2. Verify user identity if suspicious\n');
+        body.append('3. Consider temporary access restriction\n');
+        body.append('4. Update security policies if needed\n\n');
+        
+        body.append('Alert ID: ').append(alert.Id).append('\n');
+        body.append('Please investigate immediately.');
+        
+        return body.toString();
+    }
 
-    body.append('IMMEDIATE ACTIONS REQUIRED:\n');
-    body.append('1. Review user access logs\n');
-    body.append('2. Verify user identity if suspicious\n');
-    body.append('3. Consider temporary access restriction\n');
-    body.append('4. Update security policies if needed\n\n');
-
-    body.append('Alert ID: ').append(alert.Id).append('\n');
-    body.append('Please investigate immediately.');
-
-    return body.toString();
-}
-/**
- * Build detailed HTML security notification
- */
-private static String buildSecurityNotificationHTML(
-    SLAViolationAlert__c alert,
-    User targetUser,
-    String documentId,
-    SecurityContext context
-) {
-    String htmlTemplate = 
-        '<html><body style="font-family: Arial, sans-serif; color: #333;">' +
+    /**
+     * Build detailed HTML security notification
+     */
+    private static String buildSecurityNotificationHTML(SLAViolationAlert__c alert, User targetUser, String documentId, SecurityContext context) {
+        String htmlTemplate =
+            '<html><body style="font-family: Arial, sans-serif; color: #333;">' +
             '<div style="background-color: #ff4444; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px;">' +
-                '<h2 style="margin: 0;">🚨 SECURITY INCIDENT DETECTED</h2>' +
+            '<h2 style="margin: 0;">🚨 SECURITY INCIDENT DETECTED</h2>' +
             '</div>' +
-
+            
             '<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">' +
-                '<tr>' +
-                    '<td style="padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9; font-weight: bold;">Alert Type:</td>' +
-                    '<td style="padding: 10px; border: 1px solid #ddd;">' + alert.Alert_Type__c + '</td>' +
-                '</tr>' +
-                '<tr>' +
-                    '<td style="padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9; font-weight: bold;">Severity:</td>' +
-                    '<td style="padding: 10px; border: 1px solid #ddd; color: #ff4444; font-weight: bold;">' + alert.Severity__c + '</td>' +
-                '</tr>' +
-                '<tr>' +
-                    '<td style="padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9; font-weight: bold;">User:</td>' +
-                    '<td style="padding: 10px; border: 1px solid #ddd;">' + targetUser.Name + ' (' + targetUser.Email + ')</td>' +
-                '</tr>' +
-                '<tr>' +
-                    '<td style="padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9; font-weight: bold;">Document:</td>' +
-                    '<td style="padding: 10px; border: 1px solid #ddd;">' + documentId + '</td>' +
-                '</tr>' +
+            '<tr>' +
+            '<td style="padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9; font-weight: bold;">Alert Type:</td>' +
+            '<td style="padding: 10px; border: 1px solid #ddd;">' + alert.Alert_Type__c + '</td>' +
+            '</tr>' +
+            '<tr>' +
+            '<td style="padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9; font-weight: bold;">Severity:</td>' +
+            '<td style="padding: 10px; border: 1px solid #ddd; color: #ff4444; font-weight: bold;">' + alert.Severity__c + '</td>' +
+            '</tr>' +
+            '<tr>' +
+            '<td style="padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9; font-weight: bold;">User:</td>' +
+            '<td style="padding: 10px; border: 1px solid #ddd;">' + targetUser.Name + ' (' + targetUser.Email + ')</td>' +
+            '</tr>' +
+            '<tr>' +
+            '<td style="padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9; font-weight: bold;">Document:</td>' +
+            '<td style="padding: 10px; border: 1px solid #ddd;">' + documentId + '</td>' +
+            '</tr>' +
             '</table>' +
-
+            
             '<div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin-bottom: 20px;">' +
-                '<h3 style="margin-top: 0;">Incident Details:</h3>' +
-                '<p>' + alert.Message__c + '</p>' +
+            '<h3 style="margin-top: 0;">Incident Details:</h3>' +
+            '<p>' + alert.Message__c + '</p>' +
             '</div>' +
-
+            
             '<div style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px;">' +
-                '<h3 style="margin-top: 0;">Immediate Actions Required:</h3>' +
-                '<ul>' +
-                    '<li>Review user access logs immediately</li>' +
-                    '<li>Verify user identity if behavior is suspicious</li>' +
-                    '<li>Consider implementing temporary access restrictions</li>' +
-                    '<li>Update security policies if needed</li>' +
-                '</ul>' +
+            '<h3 style="margin-top: 0;">Immediate Actions Required:</h3>' +
+            '<ul>' +
+            '<li>Review user access logs immediately</li>' +
+            '<li>Verify user identity if behavior is suspicious</li>' +
+            '<li>Consider implementing temporary access restrictions</li>' +
+            '<li>Update security policies if needed</li>' +
+            '</ul>' +
             '</div>' +
-
+            
             '<p style="margin-top: 20px; font-size: 12px; color: #666;">Alert ID: ' + alert.Id + '</p>' +
-        '</body></html>';
-
-    return htmlTemplate;
-}
-
-/**
- * Check if a session is compromised
- */
-private static Boolean isSessionCompromised(
-    AuthSession session,
-    SecurityContext context
-) {
-    // Check for session anomalies
-    if (session.LoginType != 'Application' && session.SessionType != 'Oauth2') {
-        return true;
+            '</body></html>';
+        
+        return htmlTemplate;
     }
 
-    // Check for impossible travel (rough implementation)
-    if (String.isNotBlank(context.geoLocation)) {
-        // Would integrate with geolocation service in real implementation
-        return false; // Placeholder
-    }
-
-    return false;
-}
-
-/**
- * Invalidate a user session
- */
-private static void invalidateSession(
-    String sessionId
-) {
-    try {
-        // In a real implementation, this would call Salesforce APIs
-        System.debug('Invalidating session: ' + sessionId);
-    } catch (Exception e) {
-        System.debug('Session invalidation error: ' + e.getMessage());
-    }
-}
-
-/**
- * Detect suspicious concurrent access
- */
-private static Boolean detectSuspiciousConcurrentAccess(
-    List<AuthSession> sessions,
-    SecurityContext context
-) {
-    if (sessions.size() > 3) {
-        // More than 3 concurrent sessions
-        return true;
-    }
-
-    // Check for sessions from different geographic regions
-    // This would be enhanced with actual geolocation data
-    return false;
-}
-// Create a pending trusted device record for user verification
-private static void createPendingDeviceVerification(String deviceId, String userId) {
-    try {
-        TrustedDevice__c pendingDevice = new TrustedDevice__c(
-            Device_Id__c              = deviceId,
-            User_Id__c                = userId,
-            Trust_Level__c            = 'PENDING_VERIFICATION',
-            Risk_Score__c             = 50,
-            First_Seen__c             = DateTime.now(),
-            Last_Verified__c          = DateTime.now(),
-            Is_Active__c              = true,
-            Verification_Required__c  = true
-        );
-        insert pendingDevice;
-
-        // Send device verification notification
-        sendDeviceVerificationNotification(userId, deviceId);
-
-    } catch (Exception e) {
-        System.debug('Pending device creation error: ' + e.getMessage());
-    }
-}
-
-// Check if IP address is blocked based on defined ranges
-private static Boolean isIPBlocked(String ipAddress, List<BlockedIPRange__c> blockedRanges) {
-    // Simplified IP blocking check
-    for (BlockedIPRange__c range : blockedRanges) {
-        if (ipAddress.startsWith(range.IP_Range_Start__c.substring(0, 8))) {
+    /**
+     * Check if a session is compromised
+     */
+    private static Boolean isSessionCompromised(AuthSession session, SecurityContext context) {
+        // Check for session anomalies
+        if (session.LoginType != 'Application' && session.SessionType != 'Oauth2') {
             return true;
         }
+        
+        // Check for impossible travel (rough implementation)
+        if (String.isNotBlank(context.geoLocation)) {
+            // Would integrate with geolocation service in real implementation
+            return false; // Placeholder
+        }
+        
+        return false;
     }
-    return false;
-}
 
-// Check if geographic access is suspicious
-private static Boolean isSuspiciousGeographicAccess(String geoLocation) {
-    if (geoLocation.contains('Unknown') || geoLocation.contains('Anonymous')) {
-        return true;
+    /**
+     * Invalidate a user session
+     */
+    private static void invalidateSession(String sessionId) {
+        try {
+            // In a real implementation, this would call Salesforce APIs
+            System.debug('Invalidating session: ' + sessionId);
+        } catch (Exception e) {
+            System.debug('Session invalidation error: ' + e.getMessage());
+        }
     }
-    return false;
-}
 
-// Check if access is from restricted VPN/proxy
-private static Boolean isRestrictedVPNAccess(String ipAddress) {
-    // Simplified check for common VPN IP ranges
-    return ipAddress.startsWith('10.') && !isInternalNetwork(ipAddress);
-}
-
-// Check if IP belongs to internal network ranges
-private static Boolean isInternalNetwork(String ipAddress) {
-    return ipAddress.startsWith('10.0.')
-        || ipAddress.startsWith('192.168.')
-        || ipAddress.startsWith('172.');
-}
-
-// Create baseline behavior metrics for a user
-private static void createBehaviorBaseline(String userId, SecurityContext context) {
-    try {
-        UserBehaviorMetrics__c baseline = new UserBehaviorMetrics__c(
-            User_Id__c                = userId,
-            Access_Pattern__c         = 'ESTABLISHING_BASELINE',
-            Document_Types_Accessed__c = '',
-            Average_Session_Duration__c = 0,
-            Typical_Access_Hours__c   = String.valueOf(DateTime.now().hour()),
-            Behavioral_Score__c       = 50, // Neutral baseline
-            Is_Baseline__c            = true,
-            Created_Date__c           = DateTime.now()
-        );
-        insert baseline;
-
-    } catch (Exception e) {
-        System.debug('Behavior baseline creation error: ' + e.getMessage());
+    /**
+     * Detect suspicious concurrent access
+     */
+    private static Boolean detectSuspiciousConcurrentAccess(List<AuthSession> sessions, SecurityContext context) {
+        if (sessions.size() > 3) {
+            // More than 3 concurrent sessions
+            return true;
+        }
+        
+        // Check for sessions from different geographic regions
+        // This would be enhanced with actual geolocation data
+        return false;
     }
-}
+
+    /**
+     * Create a pending trusted device record for user verification
+     */
+    private static void createPendingDeviceVerification(String deviceId, String userId) {
+        try {
+            TrustedDevice__c pendingDevice = new TrustedDevice__c(
+                Device_Id__c = deviceId,
+                User_Id__c = userId,
+                Trust_Level__c = 'PENDING_VERIFICATION',
+                Risk_Score__c = 50,
+                First_Seen__c = DateTime.now(),
+                Last_Verified__c = DateTime.now(),
+                Is_Active__c = true,
+                Verification_Required__c = true
+            );
+            insert pendingDevice;
+            
+            // Send device verification notification
+            sendDeviceVerificationNotification(userId, deviceId);
+            
+        } catch (Exception e) {
+            System.debug('Pending device creation error: ' + e.getMessage());
+        }
+    }
+
+    /**
+     * Check if IP address is blocked based on defined ranges
+     */
+    private static Boolean isIPBlocked(String ipAddress, List<BlockedIPRange__c> blockedRanges) {
+        // Simplified IP blocking check
+        for (BlockedIPRange__c range : blockedRanges) {
+            if (ipAddress.startsWith(range.IP_Range_Start__c.substring(0, 8))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check if geographic access is suspicious
+     */
+    private static Boolean isSuspiciousGeographicAccess(String geoLocation) {
+        if (geoLocation.contains('Unknown') || geoLocation.contains('Anonymous')) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check if access is from restricted VPN/proxy
+     */
+    private static Boolean isRestrictedVPNAccess(String ipAddress) {
+        // Simplified check for common VPN IP ranges
+        return ipAddress.startsWith('10.') && !isInternalNetwork(ipAddress);
+    }
+
+    /**
+     * Check if IP belongs to internal network ranges
+     */
+    private static Boolean isInternalNetwork(String ipAddress) {
+        return ipAddress.startsWith('10.0.')
+            || ipAddress.startsWith('192.168.')
+            || ipAddress.startsWith('172.');
+    }
+
+    /**
+     * Create baseline behavior metrics for a user
+     */
+    private static void createBehaviorBaseline(String userId, SecurityContext context) {
+        try {
+            UserBehaviorMetrics__c baseline = new UserBehaviorMetrics__c(
+                User_Id__c = userId,
+                Access_Pattern__c = 'ESTABLISHING_BASELINE',
+                Document_Types_Accessed__c = '',
+                Average_Session_Duration__c = 0,
+                Typical_Access_Hours__c = String.valueOf(DateTime.now().hour()),
+                Behavioral_Score__c = 50, // Neutral baseline
+                Is_Baseline__c = true,
+                Created_Date__c = DateTime.now()
+            );
+            insert baseline;
+            
+        } catch (Exception e) {
+            System.debug('Behavior baseline creation error: ' + e.getMessage());
+        }
+    }
 // =====================================================
 // METHOD: calculateBehaviorDeviation
-// PARAMS: 
-//   - recentBehavior (List<UserBehaviorMetrics__c>) 
+// PARAMS:
+//   - recentBehavior (List<UserBehaviorMetrics__c>)
 //   - context (SecurityContext)
 // RETURNS: Decimal
 // =====================================================
 private static Decimal calculateBehaviorDeviation(
     List<UserBehaviorMetrics__c> recentBehavior,
-    SecurityContext context
+SecurityContext context
 ) {
     // Simplified behavior deviation calculation
     Decimal deviationScore = 0;
@@ -819,13 +804,13 @@ private static Decimal calculateBehaviorDeviation(
         UserBehaviorMetrics__c latestBehavior = recentBehavior[0];
         Integer currentHour = DateTime.now().hour();
         String typicalHours = latestBehavior.Typical_Access_Hours__c;
-
+        
         // Check if accessing outside typical hours
         if (String.isNotBlank(typicalHours) &&
-            !typicalHours.contains(String.valueOf(currentHour))) {
+        !typicalHours.contains(String.valueOf(currentHour))) {
             deviationScore += 20;
         }
-
+        
         // Add other behavioral checks here
         deviationScore += Math.random() * 10; // Placeholder for complex behavior analysis
     }
@@ -837,27 +822,27 @@ private static Decimal calculateBehaviorDeviation(
 
 // =====================================================
 // METHOD: requireBehaviorVerification
-// PARAMS: 
-//   - userId (String) 
+// PARAMS:
+//   - userId (String)
 //   - context (SecurityContext)
 // RETURNS: Boolean
 // =====================================================
 private static Boolean requireBehaviorVerification(
     String userId,
-    SecurityContext context
+SecurityContext context
 ) {
     try {
         // Create behavior verification challenge
         BehaviorChallenge__c challenge = new BehaviorChallenge__c(
             User_Id__c       = userId,
-            Challenge_Type__c = 'BEHAVIOR_ANOMALY',
-            Status__c        = 'PENDING',
-            Expiry_Time__c   = DateTime.now().addMinutes(15),
-            Session_Id__c    = context.sessionId,
-            Created_Date__c  = DateTime.now()
-        );
+        Challenge_Type__c = 'BEHAVIOR_ANOMALY',
+        Status__c        = 'PENDING',
+        Expiry_Time__c   = DateTime.now().addMinutes(15),
+        Session_Id__c    = context.sessionId,
+        Created_Date__c  = DateTime.now()
+            );
         insert challenge;
-
+        
         return false; // Deny access until verification
     } catch (Exception e) {
         System.debug('Behavior verification error: ' + e.getMessage());
@@ -869,28 +854,28 @@ private static Boolean requireBehaviorVerification(
 
 // =====================================================
 // METHOD: updateBehaviorMetrics
-// PARAMS: 
-//   - userId (String) 
-//   - context (SecurityContext) 
+// PARAMS:
+//   - userId (String)
+//   - context (SecurityContext)
 //   - deviationScore (Decimal)
 // RETURNS: void
 // =====================================================
 private static void updateBehaviorMetrics(
     String userId,
-    SecurityContext context,
-    Decimal deviationScore
+SecurityContext context,
+Decimal deviationScore
 ) {
     try {
         UserBehaviorMetrics__c metrics = new UserBehaviorMetrics__c(
             User_Id__c                 = userId,
-            Access_Pattern__c          = 'NORMAL_ACCESS',
-            Document_Types_Accessed__c = '',
-            Average_Session_Duration__c = 0,
-            Typical_Access_Hours__c    = String.valueOf(DateTime.now().hour()),
-            Behavioral_Score__c        = 100 - deviationScore,
-            Is_Baseline__c             = false,
-            Created_Date__c            = DateTime.now()
-        );
+        Access_Pattern__c          = 'NORMAL_ACCESS',
+        Document_Types_Accessed__c = '',
+        Average_Session_Duration__c = 0,
+        Typical_Access_Hours__c    = String.valueOf(DateTime.now().hour()),
+        Behavioral_Score__c        = 100 - deviationScore,
+        Is_Baseline__c             = false,
+        Created_Date__c            = DateTime.now()
+            );
         insert metrics;
     } catch (Exception e) {
         System.debug('Behavior metrics update error: ' + e.getMessage());
@@ -901,7 +886,7 @@ private static void updateBehaviorMetrics(
 
 // =====================================================
 // METHOD: getRequiredPermission
-// PARAMS: 
+// PARAMS:
 //   - document (DocumentLifecycleConfiguration__c)
 // RETURNS: String
 // =====================================================
@@ -945,24 +930,24 @@ private static UserSecurityProfile__c getUserSecurityProfile(String userId) {
 // ✅ Calculate risk score based on security context
 private static Decimal calculateContextRisk(SecurityContext context) {
     Decimal contextRisk = 0;
-
+    
     if (String.isNotBlank(context.geoLocation)) {
         if (context.geoLocation.contains('Unknown') || context.geoLocation.contains('VPN')) {
             contextRisk += 30;
         }
     }
-
+    
     if (String.isNotBlank(context.userAgent)) {
         if (context.userAgent.contains('Bot') || context.userAgent.contains('Crawler')) {
             contextRisk += 50;
         }
     }
-
+    
     Integer currentHour = DateTime.now().hour();
     if (currentHour < 6 || currentHour > 22) {
         contextRisk += 10; // Off-hours access
     }
-
+    
     return Math.min(contextRisk, 100);
 }
 
@@ -991,8 +976,8 @@ private static String generateSecureChallengeCode() {
     for (Integer i = 0; i < 6; i++) {
         challengeCode += characters.substring(
             Math.mod(Math.round(Math.random() * (characters.length() - 1)), characters.length()),
-            Math.mod(Math.round(Math.random() * (characters.length() - 1)), characters.length()) + 1
-        );
+        Math.mod(Math.round(Math.random() * (characters.length() - 1)), characters.length()) + 1
+            );
     }
     return challengeCode;
 }
@@ -1009,7 +994,7 @@ private static void sendMFAChallenge(String userId, String challengeCode) {
                 'Your security verification code is: ' + challengeCode +
                 '\n\nThis code expires in 10 minutes.' +
                 '\n\nIf you did not request this, please contact your system administrator immediately.'
-            );
+                );
             Messaging.sendEmail(new Messaging.SingleEmailMessage[]{mail});
         }
     } catch (Exception e) {
@@ -1020,7 +1005,7 @@ private static void sendMFAChallenge(String userId, String challengeCode) {
 private static void sendMFAChallenge(String userId, String challengeCode) {
     try {
         User user = [SELECT Email, MobilePhone FROM User WHERE Id = :userId LIMIT 1];
-
+        
         // Send email if available
         if (String.isNotBlank(user.Email)) {
             Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
@@ -1030,16 +1015,16 @@ private static void sendMFAChallenge(String userId, String challengeCode) {
                 'Your security verification code is: ' + challengeCode +
                 '\n\nThis code expires in 10 minutes.' +
                 '\n\nIf you did not request this, please contact your system administrator immediately.'
-            );
+                );
             Messaging.sendEmail(new Messaging.SingleEmailMessage[]{mail});
         }
-
+        
         // Also send SMS if mobile phone is available
         if (String.isNotBlank(user.MobilePhone)) {
             // In production, integrate with SMS service
             System.debug('SMS MFA code sent to: ' + user.MobilePhone + ' Code: ' + challengeCode);
         }
-
+        
     } catch (Exception e) {
         System.debug('MFA challenge sending error: ' + e.getMessage());
     }
@@ -1055,17 +1040,17 @@ private static void lockUserAccount(String userId) {
     try {
         UserAccountLock__c lockRecord = new UserAccountLock__c(
             User_Id__c = userId,
-            Lock_Reason__c = 'Multiple failed MFA attempts',
-            Lock_Start_Time__c = DateTime.now(),
-            Lock_End_Time__c = DateTime.now().addMinutes(LOCKOUT_DURATION_MINUTES),
-            Is_Active__c = true,
-            Lock_Type__c = 'TEMPORARY'
-        );
+        Lock_Reason__c = 'Multiple failed MFA attempts',
+        Lock_Start_Time__c = DateTime.now(),
+        Lock_End_Time__c = DateTime.now().addMinutes(LOCKOUT_DURATION_MINUTES),
+        Is_Active__c = true,
+        Lock_Type__c = 'TEMPORARY'
+            );
         insert lockRecord;
-
+        
         // Send account lock notification
         sendAccountLockNotification(userId);
-
+        
     } catch (Exception e) {
         System.debug('Account lock error: ' + e.getMessage());
     }
@@ -1074,7 +1059,7 @@ private static void lockUserAccount(String userId) {
 // ✅ Build security event details JSON
 private static String buildSecurityEventDetails(SecurityContext context) {
     if (context == null) return 'No security context available';
-
+    
     Map<String, Object> details = new Map<String, Object>{
         'sessionId'       => context.sessionId,
         'deviceId'        => context.deviceId,
@@ -1084,7 +1069,7 @@ private static String buildSecurityEventDetails(SecurityContext context) {
         'riskLevel'       => context.riskLevel,
         'lastVerification'=> context.lastVerification
     };
-
+    
     return JSON.serialize(details);
 }
 
@@ -1095,13 +1080,13 @@ private static String determineSeverity(String eventType) {
         'ANOMALOUS_BEHAVIOR_DETECTED',
         'MULTIPLE_FAILED_MFA_ATTEMPTS'
     };
-
+    
     Set<String> highEvents = new Set<String>{
         'UNTRUSTED_DEVICE_ACCESS',
         'SUSPICIOUS_NETWORK_ACCESS',
         'INSUFFICIENT_PERMISSIONS'
     };
-
+    
     if (criticalEvents.contains(eventType)) {
         return 'CRITICAL';
     } else if (highEvents.contains(eventType)) {
@@ -1139,13 +1124,13 @@ private static void updateLastVerification(String userId, SecurityContext contex
     try {
         UserSecurityVerification__c verification = new UserSecurityVerification__c(
             User_Id__c = userId,
-            Last_Verification__c = DateTime.now(),
-            Verification_Type__c = 'ZERO_TRUST_CONTINUOUS',
-            Session_Id__c = context.sessionId,
-            Device_Id__c = context.deviceId,
-            IP_Address__c = context.ipAddress,
-            Status__c = 'VERIFIED'
-        );
+        Last_Verification__c = DateTime.now(),
+        Verification_Type__c = 'ZERO_TRUST_CONTINUOUS',
+        Session_Id__c = context.sessionId,
+        Device_Id__c = context.deviceId,
+        IP_Address__c = context.ipAddress,
+        Status__c = 'VERIFIED'
+            );
         insert verification;
     } catch (Exception e) {
         System.debug('Verification update error: ' + e.getMessage());
@@ -1166,7 +1151,7 @@ private static void sendDeviceVerificationNotification(String userId, String dev
             'If this was you, please log in to verify this device.\n' +
             'If this was not you, please contact your system administrator immediately.\n\n' +
             'Thank you,\nDocGen Security Team'
-        );
+            );
         
         Messaging.sendEmail(new Messaging.SingleEmailMessage[]{mail});
         
@@ -1190,7 +1175,7 @@ private static void sendAccountLockNotification(String userId) {
             'please contact your system administrator immediately.\n\n' +
             'The lockout will be automatically lifted after the duration expires.\n\n' +
             'Thank you,\nDocGen Security Team'
-        );
+            );
         
         Messaging.sendEmail(new Messaging.SingleEmailMessage[]{mail});
         
@@ -1249,4 +1234,5 @@ public static void unlockUserAccount(String userId, String reason) {
     } catch (Exception e) {
         System.debug('Account unlock error: ' + e.getMessage());
     }
+}
 }
