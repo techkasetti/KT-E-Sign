@@ -1,0 +1,197 @@
+<!-- Developer_build_step_by_step_impl_e_sign v4.......................................................... -->
+
+
+<!-- <template>
+    <lightning-card title="Real-Time Security Dashboard" icon-name="utility:shield">
+        <div slot="actions">
+            <lightning-button
+                label="Refresh"
+                icon-name="utility:refresh"
+                onclick={handleRefresh}
+                class="slds-m-right_x-small">
+            </lightning-button>
+            <lightning-button
+                label="Export"
+                icon-name="utility:download"
+                onclick={handleExportData}>
+            </lightning-button>
+        </div>
+
+        <div class="slds-card__body slds-card__body_inner">
+            <template if:true={isLoading}>
+                <div class="slds-text-align_center slds-p-around_large">
+                    <lightning-spinner alternative-text="Loading security dashboard..." size="large"></lightning-spinner>
+                    <p class="slds-m-top_medium">Loading security data...</p>
+                </div>
+            </template>
+
+            <template if:false={isLoading}>
+                <div class="metrics-row slds-grid slds-wrap slds-gutters_small slds-m-bottom_large">
+                    <div class="slds-col slds-size_1-of-4">
+                        <lightning-card variant="narrow">
+                            <div class="metric-card">
+                                <div class="metric-value">{totalActiveThreats}</div>
+                                <div class="metric-label">Active Threats</div>
+                                <div class="metric-change negative">
+                                    {criticalThreats.length} critical
+                                </div>
+                            </div>
+                        </lightning-card>
+                    </div>
+                    <div class="slds-col slds-size_1-of-4">
+                        <lightning-card variant="narrow">
+                            <div class="metric-card">
+                                <div class="metric-value">{averageRiskScore}</div>
+                                <div class="metric-label">Avg Risk Score</div>
+                                <div class={riskScoreClass}>Risk Level</div>
+                            </div>
+                        </lightning-card>
+                    </div>
+                    <div class="slds-col slds-size_1-of-4">
+                        <lightning-card variant="narrow">
+                            <div class="metric-card">
+                                <div class="metric-value">{securityAlerts.length}</div>
+                                <div class="metric-label">Security Alerts</div>
+                                <div class="metric-change neutral">Last 24h</div>
+                            </div>
+                        </lightning-card>
+                    </div>
+                    <div class="slds-col slds-size_1-of-4">
+                        <lightning-card variant="narrow">
+                            <div class="metric-card">
+                                <lightning-icon 
+                                    icon-name="utility:success" 
+                                    variant={systemHealthVariant} 
+                                    size="large">
+                                </lightning-icon>
+                                <div class="metric-label">System Health</div>
+                                <div class="metric-value system-status">{systemHealthStatus}</div>
+                            </div>
+                        </lightning-card>
+                    </div>
+                </div>
+
+                <div class="charts-row slds-grid slds-wrap slds-gutters_small slds-m-bottom_large">
+                    <div class="slds-col slds-size_1-of-2">
+                        <lightning-card title="Threat Level Distribution" icon-name="utility:chart">
+                            <div class="chart-container">
+                                <template if:true={threatLevelData.length}>
+                                    <c-threat-level-chart data={threatLevelData}></c-threat-level-chart>
+                                </template>
+                                <template if:false={threatLevelData.length}>
+                                    <div class="no-data-message slds-text-align_center slds-p-around_large">
+                                        <p>No threat data available</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </lightning-card>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2">
+                        <lightning-card title="Risk Score Trends" icon-name="utility:trend">
+                            <div class="chart-container">
+                                <template if:true={riskScoreData.length}>
+                                    <c-risk-score-chart data={riskScoreData}></c-risk-score-chart>
+                                </template>
+                                <template if:false={riskScoreData.length}>
+                                    <div class="no-data-message slds-text-align_center slds-p-around_large">
+                                        <p>No trend data available</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </lightning-card>
+                    </div>
+                </div>
+
+                <div class="threats-section slds-grid slds-wrap slds-gutters_small slds-m-bottom_large">
+                    <div class="slds-col slds-size_1-of-2">
+                        <lightning-card title="Critical Threats" icon-name="utility:warning">
+                            <template if:true={criticalThreats.length}>
+                                <div class="threat-list">
+                                    <template for:each={criticalThreats} for:item="threat">
+                                        <div key={threat.id} class="threat-item critical slds-box slds-m-bottom_small" 
+                                             data-id={threat.id} onclick={handleThreatClick}>
+                                            <div class="slds-grid slds-gutters">
+                                                <div class="slds-col slds-size_1-of-1">
+                                                    <h4 class="slds-text-heading_small">{threat.userId}</h4>
+                                                    <p class="threat-description">{threat.description}</p>
+                                                    <div class="threat-meta slds-grid">
+                                                        <div class="slds-col">
+                                                            <span class="risk-score">Risk: {threat.riskScore}</span>
+                                                        </div>
+                                                        <div class="slds-col">
+                                                            <span class="timestamp">{threat.formattedTimestamp}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                            <template if:false={criticalThreats.length}>
+                                <div class="no-data-message slds-text-align_center slds-p-around_large">
+                                    <lightning-icon icon-name="utility:success" variant="success" size="large"></lightning-icon>
+                                    <p>No critical threats detected</p>
+                                </div>
+                            </template>
+                        </lightning-card>
+                    </div>
+
+                    <div class="slds-col slds-size_1-of-2">
+                        <lightning-card title="Recent Security Alerts" icon-name="utility:notification">
+                            <template if:true={recentAlerts.length}>
+                                <div class="alert-list">
+                                    <template for:each={recentAlerts} for:item="alert">
+                                        <div key={alert.id} class="alert-item slds-box slds-m-bottom_small"
+                                             data-id={alert.id} onclick={handleAlertClick}>
+                                            <div class="slds-media">
+                                                <div class="slds-media__figure">
+                                                    <lightning-icon 
+                                                        icon-name={alert.iconName} 
+                                                        variant={alert.variant} 
+                                                        size="small">
+                                                    </lightning-icon>
+                                                </div>
+                                                <div class="slds-media__body">
+                                                    <h4 class="slds-text-heading_small">{alert.title}</h4>
+                                                    <p class="alert-message">{alert.message}</p>
+                                                    <span class="alert-timestamp">{alert.formattedTimestamp}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                            <template if:false={recentAlerts.length}>
+                                <div class="no-data-message slds-text-align_center slds-p-around_large">
+                                    <p>No recent security alerts</p>
+                                </div>
+                            </template>
+                        </lightning-card>
+                    </div>
+                </div>
+
+                <div class="analytics-section slds-grid slds-wrap slds-gutters_small">
+                    <div class="slds-col slds-size_1-of-1">
+                        <lightning-card title="Security Analytics" icon-name="utility:analytics">
+                        </lightning-card>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </lightning-card>
+
+    <template if:true={error}>
+        <div class="error-container slds-text-align_center slds-p-around_large">
+            <lightning-icon icon-name="utility:error" variant="error" size="large"></lightning-icon>
+            <h3 class="slds-text-heading_medium slds-m-top_medium">Dashboard Error</h3>
+            <p class="slds-m-top_small">{error.body.message}</p>
+            <lightning-button 
+                label="Retry" 
+                variant="brand" 
+                onclick={handleRefresh} 
+                class="slds-m-top_medium">
+            </lightning-button>
+        </div>
+    </template>
+</template> -->

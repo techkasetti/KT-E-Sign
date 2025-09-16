@@ -1,0 +1,147 @@
+<template>
+    <lightning-card title="Document Generation & E-Signature" icon-name="standard:contract">
+        
+        <!-- Progress Indicator -->
+        <div class="slds-m-around_medium">
+            <lightning-progress-indicator 
+                current-step={currentStep} 
+                type="path" 
+                variant="base">
+                <template for:each={steps} for:item="step">
+                    <lightning-progress-step 
+                        key={step.value}
+                        label={step.label} 
+                        value={step.value}>
+                    </lightning-progress-step>
+                </template>
+            </lightning-progress-indicator>
+        </div>
+
+        <!-- Loading Spinner -->
+        <template if:true={isLoading}>
+            <lightning-spinner alternative-text="Processing..." size="large"></lightning-spinner>
+        </template>
+
+        <!-- Document Generation Step -->
+        <template if:true={isDocumentGeneration}>
+            <div class="slds-m-around_medium">
+                <h3 class="slds-text-heading_medium slds-m-bottom_medium">Document Details</h3>
+                
+                <lightning-layout multiple-rows>
+                    <lightning-layout-item size="6" padding="around-small">
+                        <lightning-combobox
+                            label="Region"
+                            value={documentForm.region}
+                            options={regionOptions}
+                            data-field="region"
+                            onchange={handleInputChange}
+                            required>
+                        </lightning-combobox>
+                    </lightning-layout-item>
+                    
+                    <lightning-layout-item size="6" padding="around-small">
+                        <lightning-combobox
+                            label="Role"
+                <lightning-layout-item size="6" padding="around-small">
+                    <lightning-combobox
+                        label="Role"
+                        value={documentForm.role}
+                        options={roleOptions}
+                        data-field="role"
+                        onchange={handleInputChange}
+                        required>
+                    </lightning-combobox>
+                </lightning-layout-item>
+                
+                <lightning-layout-item size="6" padding="around-small">
+                    <lightning-combobox
+                        label="Contract Type"
+                        value={documentForm.contractType}
+                        options={contractTypeOptions}
+                        data-field="contractType"
+                        onchange={handleInputChange}
+                        required>
+                    </lightning-combobox>
+                </lightning-layout-item>
+                
+                <lightning-layout-item size="6" padding="around-small">
+                    <lightning-input
+                        label="Document Title"
+                        value={documentForm.documentTitle}
+                        data-field="documentTitle"
+                        onchange={handleInputChange}
+                        required>
+                    </lightning-input>
+                </lightning-layout-item>
+                
+                <lightning-layout-item size="12" padding="around-small">
+                    <lightning-input
+                        label="Signer Email"
+                        type="email"
+                        value={documentForm.signerEmail}
+                        data-field="signerEmail"
+                        onchange={handleInputChange}
+                        required>
+                    </lightning-input>
+                </lightning-layout-item>
+            </lightning-layout>
+            
+            <div class="slds-m-top_medium slds-text-align_right">
+                <lightning-button
+                    variant="brand"
+                    label="Generate Document & Initiate Signature"
+                    onclick={handleGenerateAndSign}
+                    disabled={isLoading}>
+                </lightning-button>
+            </div>
+        </div>
+    </template>
+
+    <!-- Review Step -->
+    <template if:true={isReview}>
+        <div class="slds-m-around_medium">
+            <h3 class="slds-text-heading_medium slds-m-bottom_medium">Document Review</h3>
+            
+            <!-- Document Preview -->
+            <div class="slds-box slds-m-bottom_medium">
+                <h4 class="slds-text-heading_small slds-m-bottom_small">Generated Document</h4>
+                <p><strong>Document ID:</strong> {documentId}</p>
+                <p><strong>Signature Request ID:</strong> {signatureRequestId}</p>
+                <p><strong>Status:</strong> Ready for Signature</p>
+            </div>
+            
+            <div class="slds-text-align_right">
+                <lightning-button
+                    variant="brand"
+                    label="Proceed to Signature"
+                    onclick={handleProceedToSignature}>
+                </lightning-button>
+            </div>
+        </div>
+    </template>
+
+    <!-- Signature Step -->
+    <template if:true={isSignature}>
+        <div class="slds-m-around_medium">
+            <h3 class="slds-text-heading_medium slds-m-bottom_medium">Electronic Signature</h3>
+            
+            <!-- Embedded Signature Component -->
+            <c-signature-pad
+                signature-request-id={signatureRequestId}
+                document-id={documentId}
+                onsignaturecomplete={handleSignatureComplete}>
+            </c-signature-pad>
+        </div>
+    </template>
+
+    <!-- Completion Step -->
+    <template if:true={isComplete}>
+        <div class="slds-m-around_medium slds-text-align_center">
+            <lightning-icon icon-name="utility:success" size="large" variant="success"></lightning-icon>
+            <h3 class="slds-text-heading_medium slds-m-top_medium">Document Completed Successfully!</h3>
+            <p class="slds-m-top_small">The document has been generated, signed, and archived.</p>
+        </div>
+    </template>
+
+</lightning-card>
+</template>

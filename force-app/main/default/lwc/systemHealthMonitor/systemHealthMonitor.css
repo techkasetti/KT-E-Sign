@@ -1,0 +1,191 @@
+/* Developer_build_step_by_step_impl_e_sign v11 --------------------------------------------------------- */
+
+
+/* .health-overview {
+  margin-bottom: 2rem;
+}
+
+.health-card {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+  border-radius: 12px;
+  padding: 2rem;
+  border: none;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.health-card.warning {
+  background: linear-gradient(135deg, #ffc107, #fd7e14);
+}
+
+.health-card.critical {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+}
+
+.health-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+.health-status-text {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.health-score {
+  font-size: 1rem;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.metrics-grid {
+  height: 100%;
+}
+
+.mini-metric {
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 1rem;
+  height: 100%;
+  transition: box-shadow 0.2s ease;
+}
+
+.mini-metric:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.metric-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.metric-title {
+  margin-left: 0.5rem;
+  font-size: 0.875rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.performance-charts {
+  margin-bottom: 2rem;
+}
+
+.chart-container {
+  position: relative;
+  height: 300px;
+  padding: 1rem;
+}
+
+.performance-chart {
+  max-width: 100%;
+  height: 100%;
+}
+
+.system-alerts {
+  margin-bottom: 2rem;
+}
+
+.alerts-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.alert-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: 6px;
+  border-left: 4px solid #007bff;
+  background-color: #f8f9fa;
+}
+
+.alert-item.critical {
+  border-left-color: #dc3545;
+  background-color: #f8d7da;
+}
+
+.alert-item.warning {
+  border-left-color: #ffc107;
+  background-color: #fff3cd;
+}
+
+.alert-item.info {
+  border-left-color: #17a2b8;
+  background-color: #d1ecf1;
+}
+
+.alert-content {
+  flex: 1;
+}
+
+.alert-title {
+  font-weight: bold;
+  margin: 0 0 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.alert-message {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.alert-time {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #999;
+}
+
+.no-alerts {
+  padding: 2rem;
+}
+
+.performance-metrics {
+  margin-top: 2rem;
+}
+
+@media (max-width: 768px) {
+  .health-overview .slds-col {
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+
+  .metrics-grid .slds-col {
+    flex-basis: 100%;
+    max-width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  .performance-charts .slds-col {
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+
+  .chart-container {
+    height: 250px;
+    padding: 0.5rem;
+  }
+
+  .health-card {
+    padding: 1.5rem;
+  }
+
+  .health-status-text {
+    font-size: 1.25rem;
+  }
+
+  .metric-value {
+    font-size: 1.25rem;
+  }
+} */

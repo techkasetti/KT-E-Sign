@@ -1,0 +1,21 @@
+
+
+<!-- Developer_build_step_by_step_impl_e_sign........................................................ -->
+
+<!-- 
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>58.0</apiVersion>
+    <isExposed>true</isExposed>
+
+    <targets>
+        <target>lightning__AppPage</target>
+        <target>lightning__HomePage</target>
+        <target>lightning__Tab</target>
+    </targets>
+
+    <targetConfigs>
+        <targetConfig targets="lightning__AppPage,lightning__HomePage">
+            <property name="height" type="String" default="auto"/>
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle> -->

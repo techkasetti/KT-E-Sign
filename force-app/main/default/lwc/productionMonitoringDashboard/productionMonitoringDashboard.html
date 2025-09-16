@@ -1,0 +1,405 @@
+<template>
+    <lightning-card title="Production Monitoring Dashboard" icon-name="standard:dashboard">
+        <div class="slds-card__body slds-card__body_inner">
+
+            <!-- Tab Navigation -->
+            <lightning-tabset variant="standard" active-tab-value={selectedTab} ontabselect={handleTabChange}>
+
+                <!-- Overview Tab -->
+                <lightning-tab label="System Overview" value="overview">
+                    <div class="slds-grid slds-wrap slds-gutters">
+
+                        <!-- System Status Card -->
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                            <lightning-card title="System Status">
+                                <div class="slds-p-horizontal_medium">
+                                    <div class="slds-text-align_center">
+                                        <div class={systemStatusClass}>
+                                            <lightning-icon 
+                                                icon-name="utility:success" 
+                                                size="large" 
+                                                if:true={dashboardData.systemStatus.status}>
+                                            </lightning-icon>
+                                            <h3 class="slds-text-heading_medium">
+                                                {dashboardData.systemStatus.status}
+                                            </h3>
+                                        </div>
+                                        <p>Uptime: {dashboardData.systemStatus.uptime}</p>
+                                        <p>Active Workflows: {dashboardData.systemStatus.activeWorkflows}</p>
+                                        <p>Today's Errors: {dashboardData.systemStatus.todayErrors}</p>
+                                    </div>
+                                </div>
+                            </lightning-card>
+                        </div>
+
+                        <!-- Performance Metrics Card -->
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                            <lightning-card title="Performance Metrics">
+                                <div class="slds-p-horizontal_medium">
+                                    <div class="slds-text-align_center">
+                                        <div class={performanceGradeClass}>
+                                            <h3 class="slds-text-heading_large">
+                                                {dashboardData.performanceMetrics.performanceGrade}
+                                            </h3>
+                                        </div>
+                                        <p>Avg Processing: {dashboardData.performanceMetrics.averageProcessingTime} min</p>
+                                        <p>Processed Today: {dashboardData.performanceMetrics.processedCount}</p>
+                                        <canvas data-id="performanceChart" width="300" height="200"></canvas>
+                                    </div>
+                                </div>
+                            </lightning-card>
+                        </div>
+
+                        <!-- Alerts Card -->
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                            <lightning-card title="System Alerts">
+                                <div class="slds-p-horizontal_medium">
+                                    <div class="slds-text-align_center">
+                                        <span class={alertBadgeClass}>
+                                            {dashboardData.alertSummary.alertCount} Alerts
+                                        </span>
+                                        <div class="slds-m-top_small">
+                                            <template for:each={dashboardData.alertSummary.activeAlerts} for:item="alert">
+                                                <div key={alert} class="slds-text-color_error slds-m-bottom_x-small">
+                                                    <lightning-icon icon-name="utility:warning" size="x-small" class="slds-m-right_xx-small"></lightning-icon>
+                                                    {alert}
+                                                </div>
+                                            </template>
+                                            <template if:false={dashboardData.alertSummary.activeAlerts}>
+                                                <p class="slds-text-color_success">No active alerts</p>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </lightning-card>
+                        </div>
+
+                    </div> <!-- End System Cards Row -->
+
+                    <!-- Usage Statistics Row -->
+                    <div class="slds-grid slds-wrap slds-gutters slds-m-top_medium">
+
+                        <!-- Today's Usage -->
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                            <lightning-card title="Today's Usage">
+                                <div class="slds-p-horizontal_medium">
+                                    <canvas data-id="usageChart" width="400" height="300"></canvas>
+                                    <div class="slds-m-top_small">
+                                        <div class="slds-grid slds-grid_align-spread">
+                                            <span>Documents:</span>
+                                            <span>{dashboardData.usageStatistics.todayDocuments}</span>
+                                        </div>
+                                        <div class="slds-grid slds-grid_align-spread">
+                                            <span>Signatures:</span>
+                                            <span>{dashboardData.usageStatistics.todaySignatures}</span>
+                                        </div>
+                                        <div class="slds-grid slds-grid_align-spread">
+                                            <span>Workflows:</span>
+                                            <span>{dashboardData.usageStatistics.todayWorkflows}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </lightning-card>
+                        </div>
+
+                        <!-- Integration Health -->
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                            <lightning-card title="Integration Health">
+                                <div class="slds-p-horizontal_medium">
+                                    <div class="slds-text-align_center">
+                                        <h3 class="slds-text-heading_medium">
+                                            {dashboardData.integrationHealth.healthScore}% 
+                                        </h3>
+                                        <p>Active Services: {dashboardData.integrationHealth.activeServices}/{dashboardData.integrationHealth.totalServices}</p>
+                                    </div>
+                                    <div class="slds-m-top_small">
+                                        <template for:each={dashboardData.integrationHealth.serviceDetails} for:item="service">
+                                            <div key={service.name} class="slds-grid slds-grid_align-spread slds-m-bottom_x-small">
+                                                <span>{service.name}</span>
+                                                <lightning-badge label={service.active} variant="success" if:true={service.active}></lightning-badge>
+                                                <lightning-badge label="Down" variant="error" if:false={service.active}></lightning-badge>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </lightning-card>
+                        </div>
+
+                    </div> <!-- End Usage Stats Row -->
+                </lightning-tab>
+
+                <!-- Health Check Tab -->
+                <lightning-tab label="Health Check" value="health">
+                    <div class="slds-grid slds-wrap slds-gutters">
+                        <div class="slds-col slds-size_1-of-1">
+                            <lightning-card title="System Health Check">
+                                <div slot="actions">
+                                    <lightning-button label="Run Health Check" variant="brand" onclick={handleHealthCheck} disabled={isLoading}></lightning-button>
+                                </div>
+                                <div class="slds-p-horizontal_medium">
+                                    <div class="slds-text-align_center slds-m-bottom_medium">
+                                        <div class={healthScoreClass}>
+                                            <h2 class="slds-text-heading_large">
+                                                Health Score: {healthCheckData.healthScore}%
+                                            </h2>
+                                            <h3 class="slds-text-heading_medium">
+                                                Status: {healthCheckData.overallStatus}
+                                            </h3>
+                                        </div>
+                                    </div>
+
+                                    <!-- Component Health Grid -->
+                                    <div class="slds-grid slds-wrap slds-gutters">
+                                        <template for:each={healthCheckData.componentStatus} for:item="component" for:index="index">
+                                            <div key={component.key} class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-large-size_1-of-3">
+                                                <div class="slds-box slds-text-align_center">
+                                                    <lightning-icon icon-name="utility:success" variant="success" size="medium" if:true={component.value}></lightning-icon>
+                                                    <lightning-icon icon-name="utility:error" variant="error" size="medium" if:false={component.value}></lightning-icon>
+                                                    <h4 class="slds-text-heading_small slds-m-top_small">{component.key}</h4>
+                                                    <p class={component.value}>{component.value}</p>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <!-- Health Chart -->
+                                    <div class="slds-m-top_large">
+                                        <canvas data-id="healthChart" width="800" height="400"></canvas>
+                                    </div>
+
+                                    <!-- Last Check Information -->
+                                    <div class="slds-text-align_center slds-m-top_medium">
+                                        <p class="slds-text-color_weak">Last checked: {healthCheckData.checkTimestamp}</p>
+                                        <p>Healthy Components: {healthCheckData.healthyComponents}/{healthCheckData.totalComponents}</p>
+                                    </div>
+                                </div>
+                            </lightning-card>
+                        </div>
+                    </div>
+                </lightning-tab>
+
+                <!-- Performance Trends Tab -->
+                <lightning-tab label="Performance Trends" value="trends">
+                    <div class="slds-grid slds-wrap slds-gutters">
+
+                        <!-- Processing Time Trends -->
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                            <lightning-card title="Processing Time Trends">
+                                <div class="slds-p-horizontal_medium">
+                                    <canvas data-id="processingTrendChart" width="400" height="300"></canvas>
+                                    <div class="slds-m-top_small">
+                                        <div class="slds-grid slds-grid_align-spread">
+                                            <span>Current Average:</span>
+                                            <span>{performanceTrends.currentAverage} min</span>
+                                        </div>
+                                        <div class="slds-grid slds-grid_align-spread">
+                                            <span>Trend:</span>
+                                            <span class={performanceTrends.overallTrend}>{performanceTrends.overallTrend}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </lightning-card>
+                        </div>
+
+                        <!-- Success Rate Trends -->
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                            <lightning-card title="Success Rate Trends">
+                                <div class="slds-p-horizontal_medium">
+                                    <canvas data-id="successRateTrendChart" width="400" height="300"></canvas>
+                                    <div class="slds-m-top_small">
+                                        <template for:each={performanceTrends.successRateTrends} for:item="trend">
+                                            <div key={trend.date} class="slds-grid slds-grid_align-spread slds-m-bottom_x-small">
+                                                <span>{trend.date}</span>
+                                                <span>{trend.successRate}%</span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </lightning-card>
+                        </div>
+
+                    </div>
+                </lightning-tab>
+
+            </lightning-tabset>
+        </div>
+    </lightning-card>
+</template>
+</lightning-tab>
+
+<!-- Reports Tab -->
+<lightning-tab label="Reports" value="reports">
+    <div class="slds-grid slds-wrap slds-gutters">
+        <div class="slds-col slds-size_1-of-1">
+            <lightning-card title="Operational Reports">
+                
+                <div slot="actions">
+                    <lightning-button label="Generate Report" variant="brand" onclick={handleGenerateReport} disabled={isLoading}></lightning-button>
+                </div>
+
+                <div class="slds-p-horizontal_medium">
+                    <template if:true={operationalReport.reportStatus}>
+                        <!-- Report Header -->
+                        <div class="slds-text-align_center slds-m-bottom_medium">
+                            <h3 class="slds-text-heading_medium">
+                                {operationalReport.reportPeriod} Operational Report
+                            </h3>
+                            <p class="slds-text-color_weak">Generated: {operationalReport.generatedAt}</p>
+                        </div>
+
+                        <!-- Utilization Metrics -->
+                        <div class="slds-section slds-is-open">
+                            <h3 class="slds-section__title slds-theme_shade">
+                                <span class="slds-truncate slds-p-horizontal_small">Utilization Metrics</span>
+                            </h3>
+                            <div class="slds-section__content">
+                                <div class="slds-grid slds-wrap slds-gutters">
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                                        <div class="slds-box">
+                                            <h4 class="slds-text-heading_small">Document Generation</h4>
+                                            <p>Generated: {operationalReport.utilizationMetrics.documentsGenerated}</p>
+                                            <p>Limit: {operationalReport.utilizationMetrics.documentLimit}</p>
+                                            <p>Utilization: {operationalReport.utilizationMetrics.documentUtilization}%</p>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                                        <div class="slds-box">
+                                            <h4 class="slds-text-heading_small">E-Signatures</h4>
+                                            <p>Requested: {operationalReport.utilizationMetrics.signaturesRequested}</p>
+                                            <p>Limit: {operationalReport.utilizationMetrics.signatureLimit}</p>
+                                            <p>Utilization: {operationalReport.utilizationMetrics.signatureUtilization}%</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cost Analysis -->
+                        <div class="slds-section slds-is-open slds-m-top_medium">
+                            <h3 class="slds-section__title slds-theme_shade">
+                                <span class="slds-truncate slds-p-horizontal_small">Cost Analysis</span>
+                            </h3>
+                            <div class="slds-section__content">
+                                <div class="slds-grid slds-wrap slds-gutters">
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                                        <div class="slds-text-align_center">
+                                            <h4 class="slds-text-heading_medium">
+                                                ${operationalReport.costAnalysis.totalOperationalCost}
+                                            </h4>
+                                            <p>Total Monthly Cost</p>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                                        <div class="slds-text-align_center">
+                                            <h4 class="slds-text-heading_medium">
+                                                ${operationalReport.costAnalysis.costPerDocument}
+                                            </h4>
+                                            <p>Cost Per Document</p>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                                        <div class="slds-text-align_center">
+                                            <h4 class="slds-text-heading_medium">
+                                                ${operationalReport.costAnalysis.estimatedMonthlyCost}
+                                            </h4>
+                                            <p>Estimated Monthly</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- User Activity -->
+                        <div class="slds-section slds-is-open slds-m-top_medium">
+                            <h3 class="slds-section__title slds-theme_shade">
+                                <span class="slds-truncate slds-p-horizontal_small">User Activity</span>
+                            </h3>
+                            <div class="slds-section__content">
+                                <div class="slds-grid slds-grid_align-center">
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <div class="slds-text-align_center">
+                                            <h4 class="slds-text-heading_large">
+                                                {operationalReport.userActivity.activeUsers}
+                                            </h4>
+                                            <p>Active Users This Month</p>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <div class="slds-text-align_center">
+                                            <h4 class="slds-text-heading_large">
+                                                {operationalReport.userActivity.totalUserActions}
+                                            </h4>
+                                            <p>Total User Actions</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Compliance Summary -->
+                        <div class="slds-section slds-is-open slds-m-top_medium">
+                            <h3 class="slds-section__title slds-theme_shade">
+                                <span class="slds-truncate slds-p-horizontal_small">Compliance Summary</span>
+                            </h3>
+                            <div class="slds-section__content">
+                                <div class="slds-grid slds-wrap slds-gutters">
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-4">
+                                        <div class="slds-text-align_center">
+                                            <h4 class="slds-text-heading_medium slds-text-color_success">
+                                                {operationalReport.complianceSummary.complianceRate}%
+                                            </h4>
+                                            <p>Compliance Rate</p>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-4">
+                                        <div class="slds-text-align_center">
+                                            <h4 class="slds-text-heading_medium">
+                                                {operationalReport.complianceSummary.totalDocuments}
+                                            </h4>
+                                            <p>Total Documents</p>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-4">
+                                        <div class="slds-text-align_center">
+                                            <h4 class="slds-text-heading_medium slds-text-color_success">
+                                                {operationalReport.complianceSummary.compliantDocuments}
+                                            </h4>
+                                            <p>Compliant</p>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-4">
+                                        <div class="slds-text-align_center">
+                                            <h4 class="slds-text-heading_medium slds-text-color_error">
+                                                {operationalReport.complianceSummary.nonCompliantDocuments}
+                                            </h4>
+                                            <p>Non-Compliant</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </template>
+
+                    <template if:false={operationalReport.reportStatus}>
+                        <div class="slds-text-align_center slds-p-around_large">
+                            <p class="slds-text-color_weak">
+                                Click "Generate Report" to create an operational report
+                            </p>
+                        </div>
+                    </template>
+
+                </div>
+            </lightning-card>
+        </div>
+    </div>
+</lightning-tab>
+
+</lightning-tabset>
+
+<!-- Loading Spinner -->
+<template if:true={isLoading}>
+    <lightning-spinner alternative-text="Loading..."></lightning-spinner>
+</template>
+
+</template>
