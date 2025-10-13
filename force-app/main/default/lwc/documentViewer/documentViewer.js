@@ -1,346 +1,346 @@
 // Developer_build_step_by_step_impl_e_sign v6.............................................................
 
 
-// import { LightningElement, api, track, wire } from 'lwc';
-// import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-// import { getRecord, getFieldValue } from 'lightning/uiRecordApi';
-// import { refreshApex } from '@salesforce/apex';
-// import { NavigationMixin } from 'lightning/navigation';
+import { LightningElement, api, track, wire } from 'lwc';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import { getRecord, getFieldValue } from 'lightning/uiRecordApi';
+import { refreshApex } from '@salesforce/apex';
+import { NavigationMixin } from 'lightning/navigation';
 
-// // Import Apex methods
-// import getDocumentWithSignatureRequests from '@salesforce/apex/DocumentLifecycleDeploymentManager.getDocumentWithSignatureRequests';
-// import initiateSignatureRequest from '@salesforce/apex/SignatureRequestController.initiateSignatureRequest';
-// import getDocumentAuditTrail from '@salesforce/apex/AuditTrailManager.getDocumentAuditTrail';
+// Import Apex methods
+import getDocumentWithSignatureRequests from '@salesforce/apex/DocumentLifecycleDeploymentManager.getDocumentWithSignatureRequests';
+import initiateSignatureRequest from '@salesforce/apex/SignatureRequestController.initiateSignatureRequest';
+import getDocumentAuditTrail from '@salesforce/apex/AuditTrailManager.getDocumentAuditTrail';
 
-// // Document fields
-// const DOCUMENT_FIELDS = [
-//     'DocumentLifecycleConfiguration__c.Id',
-//     'DocumentLifecycleConfiguration__c.DocumentTitle__c',
-//     'DocumentLifecycleConfiguration__c.ContractType__c',
-//     'DocumentLifecycleConfiguration__c.Region__c',
-//     'DocumentLifecycleConfiguration__c.Role__c',
-//     'DocumentLifecycleConfiguration__c.GeneratedClause__c',
-//     'DocumentLifecycleConfiguration__c.ComplianceStatus__c',
-//     'DocumentLifecycleConfiguration__c.ProcessingStatus__c',
-//     'DocumentLifecycleConfiguration__c.CreatedDate'
-// ];
+// Document fields
+const DOCUMENT_FIELDS = [
+    'DocumentLifecycleConfiguration__c.Id',
+    'DocumentLifecycleConfiguration__c.DocumentTitle__c',
+    'DocumentLifecycleConfiguration__c.ContractType__c',
+    'DocumentLifecycleConfiguration__c.Region__c',
+    'DocumentLifecycleConfiguration__c.Role__c',
+    'DocumentLifecycleConfiguration__c.GeneratedClause__c',
+    'DocumentLifecycleConfiguration__c.ComplianceStatus__c',
+    'DocumentLifecycleConfiguration__c.ProcessingStatus__c',
+    'DocumentLifecycleConfiguration__c.CreatedDate'
+];
 
-// export default class DocumentViewer extends NavigationMixin(LightningElement) {
-//     @api recordId; // Document ID
+export default class DocumentViewer extends NavigationMixin(LightningElement) {
+    @api recordId; // Document ID
     
-//     // Data properties
-//     @track documentData = null;
-//     @track signatureRequests = [];
-//     @track auditTrail = [];
+    // Data properties
+    @track documentData = null;
+    @track signatureRequests = [];
+    @track auditTrail = [];
     
-//     // Modal properties
-//     @track showSignatureModal = false;
-//     @track modalSignerEmail = '';
-//     @track modalSignerName = '';
-//     @track modalMessage = '';
+    // Modal properties
+    @track showSignatureModal = false;
+    @track modalSignerEmail = '';
+    @track modalSignerName = '';
+    @track modalMessage = '';
     
-//     // UI state
-//     @track isLoading = true;
-//     @track hasError = false;
-//     @track errorMessage = '';
-//     @track showDocumentContent = false;
+    // UI state
+    @track isLoading = true;
+    @track hasError = false;
+    @track errorMessage = '';
+    @track showDocumentContent = false;
     
-//     // Wire to get document data
-//     @wire(getRecord, { recordId: '$recordId', fields: DOCUMENT_FIELDS })
-//     documentRecord({ error, data }) {
-//         if (data) {
-//             this.documentData = data.fields;
-//             this.hasError = false;
-//             this.loadSignatureRequests();
-//         } else if (error) {
-//             this.hasError = true;
-//             this.errorMessage = 'Failed to load document: ' + error.body?.message;
-//             this.isLoading = false;
-//         }
-//     }
+    // Wire to get document data
+    @wire(getRecord, { recordId: '$recordId', fields: DOCUMENT_FIELDS })
+    documentRecord({ error, data }) {
+        if (data) {
+            this.documentData = data.fields;
+            this.hasError = false;
+            this.loadSignatureRequests();
+        } else if (error) {
+            this.hasError = true;
+            this.errorMessage = 'Failed to load document: ' + error.body?.message;
+            this.isLoading = false;
+        }
+    }
     
-//     // Computed properties
-//     get hasSignatureRequests() {
-//         return this.signatureRequests && this.signatureRequests.length > 0;
-//     }
+    // Computed properties
+    get hasSignatureRequests() {
+        return this.signatureRequests && this.signatureRequests.length > 0;
+    }
     
-//     get signatureRequestColumns() {
-//         return [
-//             {
-//                 label: 'Request #',
-//                 fieldName: 'Name',
-//                 type: 'text'
-//             },
-//             {
-//                 label: 'Signer Name',
-//                 fieldName: 'SignerName__c',
-//                 type: 'text'
-//             },
-//             {
-//                 label: 'Signer Email',
-//                 fieldName: 'SignerEmail__c',
-//                 type: 'email'
-//             },
-//             {
-//                 label: 'Status',
-//                 fieldName: 'Status__c',
-//                 type: 'text',
-//                 cellAttributes: {
-//                     class: { fieldName: 'statusClass' }
-//                 }
-//             },
-//             {
-//                 label: 'Created Date',
-//                 fieldName: 'CreatedDate',
-//                 type: 'date',
-//                 typeAttributes: {
-//                     year: 'numeric',
-//                     month: 'short',
-//                     day: 'numeric',
-//                     hour: '2-digit',
-//                     minute: '2-digit'
-//                 }
-//             },
-//             {
-//                 type: 'action',
-//                 typeAttributes: {
-//                     rowActions: [
-//                         { label: 'View', name: 'view' },
-//                         { label: 'Resend', name: 'resend' },
-//                         { label: 'Cancel', name: 'cancel' }
-//                     ]
-//                 }
-//             }
-//         ];
-//     }
+    get signatureRequestColumns() {
+        return [
+            {
+                label: 'Request #',
+                fieldName: 'Name',
+                type: 'text'
+            },
+            {
+                label: 'Signer Name',
+                fieldName: 'SignerName__c',
+                type: 'text'
+            },
+            {
+                label: 'Signer Email',
+                fieldName: 'SignerEmail__c',
+                type: 'email'
+            },
+            {
+                label: 'Status',
+                fieldName: 'Status__c',
+                type: 'text',
+                cellAttributes: {
+                    class: { fieldName: 'statusClass' }
+                }
+            },
+            {
+                label: 'Created Date',
+                fieldName: 'CreatedDate',
+                type: 'date',
+                typeAttributes: {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }
+            },
+            {
+                type: 'action',
+                typeAttributes: {
+                    rowActions: [
+                        { label: 'View', name: 'view' },
+                        { label: 'Resend', name: 'resend' },
+                        { label: 'Cancel', name: 'cancel' }
+                    ]
+                }
+            }
+        ];
+    }
     
-//     get formattedCreatedDate() {
-//         if (this.documentData?.CreatedDate?.value) {
-//             return new Date(this.documentData.CreatedDate.value).toLocaleDateString();
-//         }
-//         return '';
-//     }
+    get formattedCreatedDate() {
+        if (this.documentData?.CreatedDate?.value) {
+            return new Date(this.documentData.CreatedDate.value).toLocaleDateString();
+        }
+        return '';
+    }
     
-//     get complianceIcon() {
-//         const status = this.documentData?.ComplianceStatus__c?.value;
-//         switch (status) {
-//             case 'Compliant':
-//                 return 'utility:success';
-//             case 'Non-Compliant':
-//                 return 'utility:error';
-//             default:
-//                 return 'utility:warning';
-//         }
-//     }
+    get complianceIcon() {
+        const status = this.documentData?.ComplianceStatus__c?.value;
+        switch (status) {
+            case 'Compliant':
+                return 'utility:success';
+            case 'Non-Compliant':
+                return 'utility:error';
+            default:
+                return 'utility:warning';
+        }
+    }
     
-//     get complianceStatusClass() {
-//         const status = this.documentData?.ComplianceStatus__c?.value;
-//         switch (status) {
-//             case 'Compliant':
-//                 return 'slds-text-color_success';
-//             case 'Non-Compliant':
-//                 return 'slds-text-color_error';
-//             default:
-//                 return 'slds-text-color_default';
-//         }
-//     }
+    get complianceStatusClass() {
+        const status = this.documentData?.ComplianceStatus__c?.value;
+        switch (status) {
+            case 'Compliant':
+                return 'slds-text-color_success';
+            case 'Non-Compliant':
+                return 'slds-text-color_error';
+            default:
+                return 'slds-text-color_default';
+        }
+    }
     
-//     get complianceScore() {
-//         // This would typically come from a custom field
-//         // For now, return a mock score based on compliance status
-//         const status = this.documentData?.ComplianceStatus__c?.value;
-//         switch (status) {
-//             case 'Compliant':
-//                 return '95';
-//             case 'Non-Compliant':
-//                 return '45';
-//             default:
-//                 return '75';
-//         }
-//     }
+    get complianceScore() {
+        // This would typically come from a custom field
+        // For now, return a mock score based on compliance status
+        const status = this.documentData?.ComplianceStatus__c?.value;
+        switch (status) {
+            case 'Compliant':
+                return '95';
+            case 'Non-Compliant':
+                return '45';
+            default:
+                return '75';
+        }
+    }
     
-//     get isModalDisabled() {
-//         return !this.modalSignerEmail || !this.modalSignerName;
-//     }
+    get isModalDisabled() {
+        return !this.modalSignerEmail || !this.modalSignerName;
+    }
     
-//     // Data loading methods
-//     async loadSignatureRequests() {
-//         try {
-//             const result = await getDocumentWithSignatureRequests({
-//                 documentId: this.recordId
-//             });
+    // Data loading methods
+    async loadSignatureRequests() {
+        try {
+            const result = await getDocumentWithSignatureRequests({
+                documentId: this.recordId
+            });
             
-//             if (result && result.signatureRequests) {
-//                 // Add status styling classes
-//                 this.signatureRequests = result.signatureRequests.map(request => ({
-//                     ...request,
-//                     statusClass: this.getStatusClass(request.Status__c)
-//                 }));
-//             }
-//         } catch (error) {
-//             console.error('Failed to load signature requests:', error);
-//         } finally {
-//             this.isLoading = false;
-//         }
-//     }
+            if (result && result.signatureRequests) {
+                // Add status styling classes
+                this.signatureRequests = result.signatureRequests.map(request => ({
+                    ...request,
+                    statusClass: this.getStatusClass(request.Status__c)
+                }));
+            }
+        } catch (error) {
+            console.error('Failed to load signature requests:', error);
+        } finally {
+            this.isLoading = false;
+        }
+    }
     
-//     getStatusClass(status) {
-//         switch (status) {
-//             case 'Signed':
-//             case 'Completed':
-//                 return 'slds-text-color_success';
-//             case 'Pending':
-//                 return 'slds-text-color_default';
-//             case 'Rejected':
-//                 return 'slds-text-color_error';
-//             default:
-//                 return 'slds-text-color_weak';
-//         }
-//     }
+    getStatusClass(status) {
+        switch (status) {
+            case 'Signed':
+            case 'Completed':
+                return 'slds-text-color_success';
+            case 'Pending':
+                return 'slds-text-color_default';
+            case 'Rejected':
+                return 'slds-text-color_error';
+            default:
+                return 'slds-text-color_weak';
+        }
+    }
     
-//     // Event handlers
-//     handleRequestSignature() {
-//         this.showSignatureModal = true;
-//     }
+    // Event handlers
+    handleRequestSignature() {
+        this.showSignatureModal = true;
+    }
     
-//     handleDownloadPDF() {
-//         // Navigate to the document record's download URL
-//         // This is a simplified implementation
-//         const documentTitle = this.documentData?.DocumentTitle__c?.value || 'Document';
-//         this.showToast('Info', `PDF download for "${documentTitle}" initiated`, 'info');
+    handleDownloadPDF() {
+        // Navigate to the document record's download URL
+        // This is a simplified implementation
+        const documentTitle = this.documentData?.DocumentTitle__c?.value || 'Document';
+        this.showToast('Info', `PDF download for "${documentTitle}" initiated`, 'info');
         
-//         // In a real implementation, you would:
-//         // 1. Call an Apex method to generate PDF
-//         // 2. Return a download URL or blob
-//         // 3. Trigger browser download
-//     }
+        // In a real implementation, you would:
+        // 1. Call an Apex method to generate PDF
+        // 2. Return a download URL or blob
+        // 3. Trigger browser download
+    }
     
-//     async handleViewAuditTrail() {
-//         try {
-//             const auditData = await getDocumentAuditTrail({
-//                 documentId: this.recordId
-//             });
+    async handleViewAuditTrail() {
+        try {
+            const auditData = await getDocumentAuditTrail({
+                documentId: this.recordId
+            });
             
-//             // Navigate to audit trail view or show in modal
-//             this.showToast('Info', `Audit trail contains ${auditData.length} entries`, 'info');
+            // Navigate to audit trail view or show in modal
+            this.showToast('Info', `Audit trail contains ${auditData.length} entries`, 'info');
             
-//             // In a full implementation, you would show audit trail in a modal or navigate to a detail page
-//         } catch (error) {
-//             this.showToast('Error', 'Failed to load audit trail: ' + error.body?.message, 'error');
-//         }
-//     }
+            // In a full implementation, you would show audit trail in a modal or navigate to a detail page
+        } catch (error) {
+            this.showToast('Error', 'Failed to load audit trail: ' + error.body?.message, 'error');
+        }
+    }
     
-//     handleRowAction(event) {
-//         const actionName = event.detail.action.name;
-//         const row = event.detail.row;
+    handleRowAction(event) {
+        const actionName = event.detail.action.name;
+        const row = event.detail.row;
         
-//         switch (actionName) {
-//             case 'view':
-//                 this.navigateToSignatureRequest(row.Id);
-//                 break;
-//             case 'resend':
-//                 this.resendSignatureRequest(row.Id);
-//                 break;
-//             case 'cancel':
-//                 this.cancelSignatureRequest(row.Id);
-//                 break;
-//         }
-//     }
+        switch (actionName) {
+            case 'view':
+                this.navigateToSignatureRequest(row.Id);
+                break;
+            case 'resend':
+                this.resendSignatureRequest(row.Id);
+                break;
+            case 'cancel':
+                this.cancelSignatureRequest(row.Id);
+                break;
+        }
+    }
     
-//     navigateToSignatureRequest(requestId) {
-//         this[NavigationMixin.Navigate]({
-//             type: 'standard__recordPage',
-//             attributes: {
-//                 recordId: requestId,
-//                 objectApiName: 'Signature_Request__c',
-//                 actionName: 'view'
-//             }
-//         });
-//     }
+    navigateToSignatureRequest(requestId) {
+        this[NavigationMixin.Navigate]({
+            type: 'standard__recordPage',
+            attributes: {
+                recordId: requestId,
+                objectApiName: 'Signature_Request__c',
+                actionName: 'view'
+            }
+        });
+    }
     
-//     async resendSignatureRequest(requestId) {
-//         try {
-//             // In a full implementation, you would call an Apex method to resend
-//             this.showToast('Success', 'Signature request resent successfully', 'success');
-//             await this.loadSignatureRequests(); // Refresh data
-//         } catch (error) {
-//             this.showToast('Error', 'Failed to resend signature request', 'error');
-//         }
-//     }
+    async resendSignatureRequest(requestId) {
+        try {
+            // In a full implementation, you would call an Apex method to resend
+            this.showToast('Success', 'Signature request resent successfully', 'success');
+            await this.loadSignatureRequests(); // Refresh data
+        } catch (error) {
+            this.showToast('Error', 'Failed to resend signature request', 'error');
+        }
+    }
     
-//     async cancelSignatureRequest(requestId) {
-//         try {
-//             // In a full implementation, you would call an Apex method to cancel
-//             this.showToast('Success', 'Signature request cancelled', 'success');
-//             await this.loadSignatureRequests(); // Refresh data
-//         } catch (error) {
-//             this.showToast('Error', 'Failed to cancel signature request', 'error');
-//         }
-//     }
+    async cancelSignatureRequest(requestId) {
+        try {
+            // In a full implementation, you would call an Apex method to cancel
+            this.showToast('Success', 'Signature request cancelled', 'success');
+            await this.loadSignatureRequests(); // Refresh data
+        } catch (error) {
+            this.showToast('Error', 'Failed to cancel signature request', 'error');
+        }
+    }
     
-//     // Modal handlers
-//     handleCloseModal() {
-//         this.showSignatureModal = false;
-//         this.modalSignerEmail = '';
-//         this.modalSignerName = '';
-//         this.modalMessage = '';
-//     }
+    // Modal handlers
+    handleCloseModal() {
+        this.showSignatureModal = false;
+        this.modalSignerEmail = '';
+        this.modalSignerName = '';
+        this.modalMessage = '';
+    }
     
-//     handleModalSignerEmailChange(event) {
-//         this.modalSignerEmail = event.target.value;
-//     }
+    handleModalSignerEmailChange(event) {
+        this.modalSignerEmail = event.target.value;
+    }
     
-//     handleModalSignerNameChange(event) {
-//         this.modalSignerName = event.target.value;
-//     }
+    handleModalSignerNameChange(event) {
+        this.modalSignerName = event.target.value;
+    }
     
-//     handleModalMessageChange(event) {
-//         this.modalMessage = event.target.value;
-//     }
+    handleModalMessageChange(event) {
+        this.modalMessage = event.target.value;
+    }
     
-//     async handleSendSignatureRequest() {
-//         if (this.isModalDisabled) {
-//             this.showToast('Error', 'Please fill in all required fields', 'error');
-//             return;
-//         }
+    async handleSendSignatureRequest() {
+        if (this.isModalDisabled) {
+            this.showToast('Error', 'Please fill in all required fields', 'error');
+            return;
+        }
         
-//         try {
-//             this.isLoading = true;
+        try {
+            this.isLoading = true;
             
-//             const requestId = await initiateSignatureRequest({
-//                 documentId: this.recordId,
-//                 signerEmail: this.modalSignerEmail,
-//                 signerName: this.modalSignerName
-//             });
+            const requestId = await initiateSignatureRequest({
+                documentId: this.recordId,
+                signerEmail: this.modalSignerEmail,
+                signerName: this.modalSignerName
+            });
             
-//             this.showToast('Success', 'Signature request sent successfully!', 'success');
-//             this.handleCloseModal();
+            this.showToast('Success', 'Signature request sent successfully!', 'success');
+            this.handleCloseModal();
             
-//             // Refresh the signature requests list
-//             await this.loadSignatureRequests();
+            // Refresh the signature requests list
+            await this.loadSignatureRequests();
             
-//         } catch (error) {
-//             this.showToast('Error', 'Failed to send signature request: ' + error.body?.message, 'error');
-//         } finally {
-//             this.isLoading = false;
-//         }
-//     }
+        } catch (error) {
+            this.showToast('Error', 'Failed to send signature request: ' + error.body?.message, 'error');
+        } finally {
+            this.isLoading = false;
+        }
+    }
     
-//     // Toggle document content visibility
-//     toggleDocumentContent() {
-//         this.showDocumentContent = !this.showDocumentContent;
-//     }
+    // Toggle document content visibility
+    toggleDocumentContent() {
+        this.showDocumentContent = !this.showDocumentContent;
+    }
     
-//     // Utility method
-//     showToast(title, message, variant) {
-//         const evt = new ShowToastEvent({
-//             title: title,
-//             message: message,
-//             variant: variant
-//         });
-//         this.dispatchEvent(evt);
-//     }
-// }
+    // Utility method
+    showToast(title, message, variant) {
+        const evt = new ShowToastEvent({
+            title: title,
+            message: message,
+            variant: variant
+        });
+        this.dispatchEvent(evt);
+    }
+}
 
 
 

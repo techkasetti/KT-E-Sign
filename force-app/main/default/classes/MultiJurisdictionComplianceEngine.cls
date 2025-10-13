@@ -1,4 +1,33 @@
 public class MultiJurisdictionComplianceEngine {
+
+
+
+    public static ComplianceValidationResult validateClause(String clause, String region, String contractType) {
+    ComplianceValidationResult result = new ComplianceValidationResult();
+    result.violations = new List<String>();
+    try {
+        // general checks
+        if (!validateGeneralCompliance(clause, result.violations)) {
+            result.isCompliant = false;
+        }
+        // regional
+        if (!validateRegionalCompliance(clause, region, result.violations)) result.isCompliant = false;
+        // contract type
+        if (!validateContractTypeCompliance(clause, contractType, result.violations)) result.isCompliant = false;
+        result.complianceScore = calculateComplianceScore(result.violations);
+        result.isCompliant = (result.complianceScore >= 80 && result.violations.isEmpty());
+        result.recommendation = generateComplianceRecommendations(result.violations, result.complianceScore);
+        logComplianceCheck(clause, result);
+        return result;
+    } catch (Exception e) {
+        AuditTrailManager.logSystemActivity('COMPLIANCE_ERROR', e.getMessage());
+        result.isCompliant = false;
+        result.violations.add('Processing error: ' + e.getMessage());
+        result.complianceScore = 0;
+        return result;
+    }
+}
+
     
     private static final Map<String, JurisdictionConfig> JURISDICTION_CONFIGS = new Map<String, JurisdictionConfig>{
         'US' => new JurisdictionConfig('US', 'ESIGN_ACT', true, 'SHA-256', 2555, true),

@@ -186,11 +186,29 @@ public class BulkAuditRequest {
 }
 
 
+public static void createAuditEntry(String recordId, String action, String status, String details) {
+    try {
+      AuditTrail__c a = new AuditTrail__c(
+        RecordId__c = recordId,
+        Action__c = action,
+        Status__c = status,
+        Details__c = details,
+        Timestamp__c = System.now(),
+        UserId__c = UserInfo.getUserId(),
+        IP_Address__c = getClientIPAddress(),
+        User_Agent__c = getUserAgent()
+      );
+      Map<String,String> geo = geoForIp(a.IP_Address__c);
+      a.Location_City__c = geo.get('city');
+      a.Location_Country__c = geo.get('country');
+      insert a;
+    } catch (Exception e) {
+      System.debug('Audit create failed: ' + e.getMessage());
+    }
+  }
+
+
         public static void createAuditEntry(
-
-
-
-
         String recordId, 
         String action, 
         String status, 
@@ -274,32 +292,31 @@ public class BulkAuditRequest {
             // Don't throw exception to avoid breaking main process
         }
     }
-
-    private static String getClientIP() {
-        // Implementation to capture client IP address
-        return '127.0.0.1'; // Placeholder
+ private static String getClientIP() {
+        if(RestContext.request != null){
+            // favored header is X‑Forwarded‑For if behind proxy
+            String xff = RestContext.request.headers.get('X-Forwarded-For');
+            if(String.isNotBlank(xff)) return xff.split(',')[0].trim();
+            return RestContext.request.remoteAddress != null ? RestContext.request.remoteAddress : 'UNKNOWN';
+        }
+        return 'UNKNOWN';
     }
 
         public static void logSystemActivity(String action, String details) {
-   
-           createAuditEntry('SYSTEM', action, 'Info', details);
+        try {
+            AuditTrail__c a = new AuditTrail__c(
+                Action__c = action,
+                Details__c = details,
+                UserId__c = UserInfo.getUserId(),
+                IP_Address__c = getClientIP(),
+                User_Agent__c = getUserAgent(),
+                Timestamp__c = System.now()
+            );
+            insert a;
+        } catch(Exception e) {
+            System.debug('Audit logging failed: ' + e.getMessage());
         }
-   
-            //     try {
-    //         AuditTrail__c audit = new AuditTrail__c(
-    //             Action__c = action,
-    //             Status__c = 'SUCCESS',
-    //             Details__c = details,
-    //             Timestamp__c = System.now(),
-    //             UserId__c = UserInfo.getUserId()
-    //         );
-    //         insert audit;
-            
-    //         System.debug('✓ System audit logged: ' + action);
-    //     } catch (Exception e) {
-    //         System.debug('⚠ Failed to log system audit: ' + e.getMessage());
-    //     }
-    // }
+    }
     
     public static void logError(String action, String errorMessage, String documentId) {
         try {
@@ -498,16 +515,50 @@ public static void logSecurityEvent(
 }
 
 private static String getClientIPAddress() {
-    // TODO: DEVELOPER IMPLEMENTATION REQUIRED
-    // This method should extract client IP from request headers
-    // Implementation depends on your Salesforce environment and proxy setup
-    return 'IP_ADDRESS_PLACEHOLDER'; // Replace with actual implementation
+  try {
+    if (RestContext.request != null && RestContext.request.headers != null) {
+      // X‑Forwarded‑For handling
+      String xff = RestContext.request.headers.get('X‑Forwarded‑For');
+      if (String.isNotBlank(xff)) {
+        // XFF can contain comma list; pick first public IP
+        List<String> parts = xff.split(',');
+        return parts.size() > 0 ? parts[0].trim() : xff;
+      }
+      // fallback to request.remoteAddress if available
+      if (RestContext.request.remoteAddress != null) return RestContext.request.remoteAddress;
+    }
+  } catch (Exception e) {
+    System.debug('IP detection failed: ' + e.getMessage());
+  }
+  return 'UNKNOWN';
 }
+private static Map<String,String> geoForIp(String ip) {
+    Map<String,String> out = new Map<String,String>{ 'city'=>null, 'country'=>null };
+    // TODO: call IP geolocation (callout:GeoService/locate)
+    return out;
+  }
 private static String getUserAgent() {
-    // TODO: DEVELOPER IMPLEMENTATION REQUIRED
-    // Extract user agent from HTTP headers if available
-    return 'USER_AGENT_PLACEHOLDER'; // Replace with actual implementation
+  try {
+    if (RestContext.request != null && RestContext.request.headers != null) {
+      String ua = RestContext.request.headers.get('User‑Agent');
+      return ua == null ? 'UNKNOWN' : ua;
+    }
+  } catch (Exception e) { }
+  return 'UNKNOWN';
 }
+
+private static String getLocationCountry(String ipAddress) {
+  // Integrate with IP geolocation service (callout)
+  // Placeholder: return null until service is available
+  return null;
+}
+
+ private static String getUserAgent() {
+        if(RestContext.request != null) {
+            return RestContext.request.headers.get('User-Agent') != null ? RestContext.request.headers.get('User-Agent') : 'UNKNOWN';
+        }
+        return 'UNKNOWN';
+    }
 private static String getDeviceType() {
     // TODO: DEVELOPER IMPLEMENTATION REQUIRED
     // Determine device type from user agent or other indicators

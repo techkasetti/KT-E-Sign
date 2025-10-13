@@ -214,25 +214,30 @@ public class DocuSignIntegrationService {
      * DEVELOPER TODO: Implement PDF conversion logic based on your document format
      * This is a stub that needs completion
      */
-    private static String convertToBase64PDF(String documentContent) {
-        // TODO: DEVELOPER IMPLEMENTATION REQUIRED
-        // This method should convert the document content to a properly formatted PDF
-        // and return the Base64 encoded string
-        // 
-        // Options:
-        // 1. Use Salesforce's built-in PDF generation capabilities
-        // 2. Integrate with external PDF generation service
-        // 3. Use document templates and merge fields
-        
-        // PLACEHOLDER IMPLEMENTATION:
-        String pdfContent = 'JVBERi0xLjQKJcfsj6IKNSAwIG9iago8PAovTGVuZ3RoIDYgMCBSCi9GaWx0ZXIgL0ZsYXRlRGVjb2RlCj4+CnN0cmVhbQp4nDMwMFAwULA1MABCYyNjc2MLA3Pg3xd8GJkYmJkBOsYmBWABJiZmCoYGRiAFxkZmBGmZGZpZGJqZmVsAm...';
-        
-        // TODO: Replace with actual PDF generation
-        System.debug('WARNING: convertToBase64PDF method needs implementation');
-        System.debug('Document content length: ' + documentContent.length());
-        
-        return pdfContent;
+    // Convert HTML/text content to PDF base64 using Visualforce renderAs (server side).
+// This implementation assumes you can create a VF page Visualforce/Template that accepts content.
+// DocuSignIntegrationService - helper
+private static String convertToBase64PDF(String documentContent) {
+    // NOTE: Apex cannot reliably render HTML->PDF; this example calls a secure external PDF rendering service
+    // Configure a Named Credential "PDF_Service" with the endpoint and auth
+    HttpRequest req = new HttpRequest();
+    req.setEndpoint('callout:PDF_Service/generate'); // Named Credential
+    req.setMethod('POST');
+    req.setHeader('Content-Type','application/json;charset=UTF-8');
+    req.setBody(JSON.serialize(new Map<String,Object>{ 'html' => documentContent }));
+    Http http = new Http();
+    HttpResponse res = http.send(req);
+    if (res.getStatusCode() == 200) {
+        // assume the service returns the PDF as base64 in body; adapt as needed
+        Map<String,Object> resp = (Map<String,Object>) JSON.deserializeUntyped(res.getBody());
+        String base64 = (String) resp.get('base64Pdf');
+        if (String.isNotBlank(base64)) return base64;
+        throw new CalloutException('PDF service returned no PDF payload');
     }
+    throw new CalloutException('PDF service failed: ' + res.getStatus() + ' ' + res.getBody());
+}
+
+
     
     /**
      * Update signature request with DocuSign envelope ID

@@ -5,6 +5,13 @@ public class SignatureBatchScheduler implements Schedulable {
         this.operationType = operation;
     }
     
+
+    private Boolean isWeeklySchedule() {
+  // Apex DateTime dayOfWeek: DateTime.now().format('e') is not portable; use Date.today().dayOfWeek() (1=Sunday..7=Saturday)
+  Integer dow = Date.today().dayOfWeek(); // 1..7
+  return dow == 1; // run on Sunday
+}
+
     public void execute(SchedulableContext sc) {
         try {
             SignatureBatchProcessor batch = new SignatureBatchProcessor(operationType);

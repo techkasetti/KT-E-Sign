@@ -1,10 +1,36 @@
 public class LivenessDetectionService {
     @AuraEnabled
-    public static BiometricValidationResult performLivenessCheck(String imageData, String method) {
-        // Implement integration with AWS Rekognition or similar
-        // Call external biometric service
-        // Return liveness score and validation result
-    }
+    public static Id enrollBiometricTemplate(Id userId, String modality, Blob biometricBlob, String metaJson) {
+  // call external secure biometric enrollment service (callout)
+  HttpRequest req = new HttpRequest();
+  req.setEndpoint('callout:BiometricService/enroll');
+  req.setMethod('POST');
+  req.setHeader('Content-Type','application/json');
+  Map<String,Object> payload = new Map<String,Object>{
+    'userId' => userId,
+    'modality' => modality,
+    'data' => EncodingUtil.base64Encode(biometricBlob),
+    'metadata' => metaJson
+  };
+  req.setBody(JSON.serialize(payload));
+  Http http = new Http();
+  HttpResponse resp = http.send(req);
+  if (resp.getStatusCode() == 201) {
+    Map<String,Object> r = (Map<String,Object>)JSON.deserializeUntyped(resp.getBody());
+    Biometric_Template__c t = new Biometric_Template__c(
+       User__c = userId,
+       Modality__c = modality,
+       External_Template_Id__c = (String)r.get('id'),
+       Confidence__c = Decimal.valueOf(r.get('confidence'))
+    );
+    insert t;
+    return t.Id;
+  } else {
+    // throw detailed exception with audit
+    throw new AuraHandledException('Biometric enrollment failed: ' + resp.getBody());
+  }
+}
+
     @AuraEnabled
     public static LivenessResult performLivenessCheck(String imageData) {
         try {

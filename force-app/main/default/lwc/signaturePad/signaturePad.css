@@ -1,76 +1,13 @@
 
 
 
-/* Developer_build_step_by_step_impl_e_sign v11 --------------------------------------------------------- */
-
-/* 
-.document-metadata {
-background-color: #f8f9fa;
-border-left: 4px solid #0176d3;
-}
-
-.document-display {
-background-color: white;
-border: 1px solid #dddbda;
-border-radius: 4px;
-padding: 1rem;
-max-height: 400px;
-overflow-y: auto;
-}
-
-.content-text {
-line-height: 1.6;
-font-family: 'Salesforce Sans', Arial, sans-serif;
-}
-
-.signature-requests-section {
-background-color: #fafafa;
-}
-
-.content-actions {
-text-align: right;
-}
-
-.no-requests {
-background-color: #f3f2f2;
-border-radius: 4px;
-}
-
-.slds-modal__container {
-width: 60%;
-max-width: 50rem;
-}
-
-.slds-modal_large .slds-modal__container {
-width: 80%;
-max-width: 70rem;
-}
-
-@media (max-width: 768px) {
-.slds-modal__container {
-width: 95%;
-margin: 0.5rem;
-}
-
-.document-display {
-max-height: 250px;
-padding: 0.75rem;
-}
-
-.content-actions {
-text-align: center;
-margin-top: 0.5rem;
-}
-} */
-
-
 
 
 
 /* Developer_build_step_by_step_impl_e_sign v11------------------------------------------------------- */
 
 
-/* .document-info {
+ .document-info {
     background-color: #f8f9fa;
     border-left: 4px solid #0176d3;
 }
@@ -184,7 +121,7 @@ margin-top: 0.5rem;
         min-height: 44px;
         font-size: 1rem;
     }
-} */
+} 
 
 
 

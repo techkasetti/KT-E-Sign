@@ -1,162 +1,160 @@
-// Developer_build_step_by_step_impl_e_sign v11-----------------------------------------------------------
+import { LightningElement, track } from 'lwc';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import generateDocument from '@salesforce/apex/DocumentLifecycleDeploymentManager.generateDocument';
+import createSignatureRequest from '@salesforce/apex/SignatureRequestController.createSignatureRequest';
 
-// import { LightningElement, track } from 'lwc';
-// import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-// import generateDocument from '@salesforce/apex/DocumentLifecycleDeploymentManager.generateDocument';
-// import createSignatureRequest from '@salesforce/apex/SignatureRequestController.createSignatureRequest';
+export default class DocumentGenerator extends LightningElement {
+    @track selectedRegion = '';
+    @track selectedRole = '';
+    @track selectedContractType = '';
+    @track documentTitle = '';
+    @track generatedDocument = null;
+    @track generatedClause = '';
+    @track complianceStatus = '';
+    @track isGenerating = false;
+    @track showModal = false;
+    @track signerEmail = '';
+    @track signerName = '';
+    @track isProcessing = false;
 
-// export default class DocumentGenerator extends LightningElement {
-//     @track selectedRegion = '';
-//     @track selectedRole = '';
-//     @track selectedContractType = '';
-//     @track documentTitle = '';
-//     @track generatedDocument = null;
-//     @track generatedClause = '';
-//     @track complianceStatus = '';
-//     @track isGenerating = false;
-//     @track showModal = false;
-//     @track signerEmail = '';
-//     @track signerName = '';
-//     @track isProcessing = false;
+    get regionOptions() {
+        return [
+            { label: 'United States', value: 'US' },
+            { label: 'European Union', value: 'EU' },
+            { label: 'Asia Pacific', value: 'APAC' },
+            { label: 'Global', value: 'Global' }
+        ];
+    }
 
-//     get regionOptions() {
-//         return [
-//             { label: 'United States', value: 'US' },
-//             { label: 'European Union', value: 'EU' },
-//             { label: 'Asia Pacific', value: 'APAC' },
-//             { label: 'Global', value: 'Global' }
-//         ];
-//     }
+    get roleOptions() {
+        return [
+            { label: 'Manager', value: 'Manager' },
+            { label: 'Director', value: 'Director' },
+            { label: 'Vice President', value: 'VP' },
+            { label: 'C-Level Executive', value: 'C-Level' },
+            { label: 'Employee', value: 'Employee' }
+        ];
+    }
 
-//     get roleOptions() {
-//         return [
-//             { label: 'Manager', value: 'Manager' },
-//             { label: 'Director', value: 'Director' },
-//             { label: 'Vice President', value: 'VP' },
-//             { label: 'C-Level Executive', value: 'C-Level' },
-//             { label: 'Employee', value: 'Employee' }
-//         ];
-//     }
+    get contractTypeOptions() {
+        return [
+            { label: 'Employment Agreement', value: 'Employment' },
+            { label: 'Non-Disclosure Agreement', value: 'NDA' },
+            { label: 'Service Agreement', value: 'Service Agreement' },
+            { label: 'Partnership Agreement', value: 'Partnership' }
+        ];
+    }
 
-//     get contractTypeOptions() {
-//         return [
-//             { label: 'Employment Agreement', value: 'Employment' },
-//             { label: 'Non-Disclosure Agreement', value: 'NDA' },
-//             { label: 'Service Agreement', value: 'Service Agreement' },
-//             { label: 'Partnership Agreement', value: 'Partnership' }
-//         ];
-//     }
+    get complianceVariant() {
+        return this.complianceStatus === 'Compliant' ? 'success' : 'warning';
+    }
 
-//     get complianceVariant() {
-//         return this.complianceStatus === 'Compliant' ? 'success' : 'warning';
-//     }
+    get isFormValid() {
+        return this.selectedRegion && this.selectedRole && this.selectedContractType && this.documentTitle;
+    }
 
-//     get isFormValid() {
-//         return this.selectedRegion && this.selectedRole && this.selectedContractType && this.documentTitle;
-//     }
+    handleRegionChange(event) {
+        this.selectedRegion = event.detail.value;
+    }
 
-//     handleRegionChange(event) {
-//         this.selectedRegion = event.detail.value;
-//     }
+    handleRoleChange(event) {
+        this.selectedRole = event.detail.value;
+    }
 
-//     handleRoleChange(event) {
-//         this.selectedRole = event.detail.value;
-//     }
+    handleContractTypeChange(event) {
+        this.selectedContractType = event.detail.value;
+    }
 
-//     handleContractTypeChange(event) {
-//         this.selectedContractType = event.detail.value;
-//     }
+    handleTitleChange(event) {
+        this.documentTitle = event.detail.value;
+    }
 
-//     handleTitleChange(event) {
-//         this.documentTitle = event.detail.value;
-//     }
+    async generateDocument() {
+        if (!this.isFormValid) {
+            this.showToast('Error', 'Please fill in all required fields', 'error');
+            return;
+        }
 
-//     async generateDocument() {
-//         if (!this.isFormValid) {
-//             this.showToast('Error', 'Please fill in all required fields', 'error');
-//             return;
-//         }
+        this.isGenerating = true;
+        try {
+            const result = await generateDocument({
+                region: this.selectedRegion,
+                role: this.selectedRole,
+                contractType: this.selectedContractType,
+                documentTitle: this.documentTitle
+            });
 
-//         this.isGenerating = true;
-//         try {
-//             const result = await generateDocument({
-//                 region: this.selectedRegion,
-//                 role: this.selectedRole,
-//                 contractType: this.selectedContractType,
-//                 documentTitle: this.documentTitle
-//             });
+            if (result.success) {
+                this.generatedDocument = result;
+                this.generatedClause = result.generatedClause;
+                this.complianceStatus = result.complianceStatus;
+                this.showToast('Success', 'Document generated successfully', 'success');
+            } else {
+                this.showToast('Error', result.errorMessage, 'error');
+            }
+        } catch (error) {
+            this.showToast('Error', 'An error occurred while generating the document', 'error');
+            console.error('Generate Document Error:', error);
+        } finally {
+            this.isGenerating = false;
+        }
+    }
 
-//             if (result.success) {
-//                 this.generatedDocument = result;
-//                 this.generatedClause = result.generatedClause;
-//                 this.complianceStatus = result.complianceStatus;
-//                 this.showToast('Success', 'Document generated successfully', 'success');
-//             } else {
-//                 this.showToast('Error', result.errorMessage, 'error');
-//             }
-//         } catch (error) {
-//             this.showToast('Error', 'An error occurred while generating the document', 'error');
-//             console.error('Generate Document Error:', error);
-//         } finally {
-//             this.isGenerating = false;
-//         }
-//     }
+    showSignatureRequest() {
+        this.showModal = true;
+    }
 
-//     showSignatureRequest() {
-//         this.showModal = true;
-//     }
+    closeModal() {
+        this.showModal = false;
+        this.signerEmail = '';
+        this.signerName = '';
+    }
 
-//     closeModal() {
-//         this.showModal = false;
-//         this.signerEmail = '';
-//         this.signerName = '';
-//     }
+    handleSignerEmailChange(event) {
+        this.signerEmail = event.detail.value;
+    }
 
-//     handleSignerEmailChange(event) {
-//         this.signerEmail = event.detail.value;
-//     }
+    handleSignerNameChange(event) {
+        this.signerName = event.detail.value;
+    }
 
-//     handleSignerNameChange(event) {
-//         this.signerName = event.detail.value;
-//     }
+    async sendSignatureRequest() {
+        if (!this.signerEmail || !this.signerName) {
+            this.showToast('Error', 'Please enter signer email and name', 'error');
+            return;
+        }
 
-//     async sendSignatureRequest() {
-//         if (!this.signerEmail || !this.signerName) {
-//             this.showToast('Error', 'Please enter signer email and name', 'error');
-//             return;
-//         }
+        this.isProcessing = true;
+        try {
+            const result = await createSignatureRequest({
+                documentId: this.generatedDocument.documentId,
+                signerEmail: this.signerEmail,
+                signerName: this.signerName
+            });
 
-//         this.isProcessing = true;
-//         try {
-//             const result = await createSignatureRequest({
-//                 documentId: this.generatedDocument.documentId,
-//                 signerEmail: this.signerEmail,
-//                 signerName: this.signerName
-//             });
+            if (result.success) {
+                this.showToast('Success', 'Signature request sent successfully', 'success');
+                this.closeModal();
+            } else {
+                this.showToast('Error', result.errorMessage, 'error');
+            }
+        } catch (error) {
+            this.showToast('Error', 'An error occurred while sending signature request', 'error');
+            console.error('Send Signature Request Error:', error);
+        } finally {
+            this.isProcessing = false;
+        }
+    }
 
-//             if (result.success) {
-//                 this.showToast('Success', 'Signature request sent successfully', 'success');
-//                 this.closeModal();
-//             } else {
-//                 this.showToast('Error', result.errorMessage, 'error');
-//             }
-//         } catch (error) {
-//             this.showToast('Error', 'An error occurred while sending signature request', 'error');
-//             console.error('Send Signature Request Error:', error);
-//         } finally {
-//             this.isProcessing = false;
-//         }
-//     }
-
-//     showToast(title, message, variant) {
-//         const evt = new ShowToastEvent({
-//             title: title,
-//             message: message,
-//             variant: variant
-//         });
-//         this.dispatchEvent(evt);
-//     }
-// }
+    showToast(title, message, variant) {
+        const evt = new ShowToastEvent({
+            title: title,
+            message: message,
+            variant: variant
+        });
+        this.dispatchEvent(evt);
+    }
+}
 
 
 

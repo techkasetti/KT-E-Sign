@@ -1,5 +1,178 @@
 
+<template>
+    <lightning-card title="Document Generator" icon-name="standard:document">
+        <div class="slds-card__body slds-card__body_inner">
 
+            <div class="config-section slds-box slds-m-bottom_medium">
+                <h3 class="slds-text-heading_small slds-m-bottom_medium">
+                    Document Configuration
+                </h3>
+                
+                <div class="slds-grid slds-gutters slds-wrap">
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                        <lightning-combobox
+                            name="region"
+                            label="Region"
+                            value={selectedRegion}
+                            placeholder="Select Region"
+                            options={regionOptions}
+                            onchange={handleRegionChange}
+                            required>
+                        </lightning-combobox>
+                    </div>
+
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                        <lightning-combobox
+                            name="role"
+                            label="Role"
+                            value={selectedRole}
+                            placeholder="Select Role"
+                            options={roleOptions}
+                            onchange={handleRoleChange}
+                            required>
+                        </lightning-combobox>
+                    </div>
+
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                        <lightning-combobox
+                            name="contractType"
+                            label="Contract Type"
+                            value={selectedContractType}
+                            placeholder="Select Contract Type"
+                            options={contractTypeOptions}
+                            onchange={handleContractTypeChange}
+                            required>
+                        </lightning-combobox>
+                    </div>
+                </div>
+
+                <div class="slds-m-top_medium">
+                    <lightning-input
+                        name="documentTitle"
+                        label="Document Title"
+                        value={documentTitle}
+                        placeholder="Enter document title"
+                        onchange={handleTitleChange}
+                        required>
+                    </lightning-input>
+                </div>
+            </div>
+
+            <div class="actions-section slds-box slds-m-bottom_medium">
+                <div class="slds-grid slds-gutters">
+                    <div class="slds-col">
+                        <lightning-button
+                            label="Generate Document"
+                            variant="brand"
+                            onclick={generateDocument}
+                            disabled={isGenerating}
+                            class="slds-m-right_small">
+                        </lightning-button>
+
+                        <template if:true={generatedDocument}>
+                            <lightning-button
+                                label="Request Signature"
+                                variant="neutral"
+                                onclick={showSignatureRequest}
+                                class="slds-m-right_small">
+                            </lightning-button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <template if:true={generatedDocument}>
+                <div class="content-section slds-box">
+                    <h3 class="slds-text-heading_small slds-m-bottom_medium">
+                        Generated Document
+                    </h3>
+
+                    <div class="document-preview slds-box slds-box_small">
+                        <div class="document-header">
+                            <h4 class="slds-text-heading_medium">
+                                {documentTitle}
+                            </h4>
+                            <p class="slds-text-body_small slds-text-color_weak">
+                                Region: {selectedRegion} | Role: {selectedRole} | Type: {selectedContractType}
+                            </p>
+                        </div>
+
+                        <div class="document-content slds-m-top_medium">
+                            <lightning-formatted-rich-text value={generatedClause}>
+                            </lightning-formatted-rich-text>
+                        </div>
+
+                        <div class="compliance-status slds-m-top_medium">
+                            <lightning-badge
+                                label={complianceStatus}
+                                variant={complianceVariant}>
+                            </lightning-badge>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <template if:true={isGenerating}>
+                <div class="loading-section slds-text-align_center slds-p-around_large">
+                    <lightning-spinner 
+                        alternative-text="Generating document..." 
+                        size="medium">
+                    </lightning-spinner>
+                    <p class="slds-m-top_medium">Generating your document...</p>
+                </div>
+            </template>
+        </div>
+    </lightning-card>
+
+    <template if:true={showModal}>
+        <section role="dialog" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+
+                <header class="slds-modal__header">
+                    <h2 class="slds-text-heading_medium">Request Signature</h2>
+                </header>
+
+                <div class="slds-modal__content slds-p-around_medium">
+                    <div class="slds-form slds-form_stacked">
+                        <lightning-input
+                            type="email"
+                            name="signerEmail"
+                            label="Signer Email"
+                            value={signerEmail}
+                            onchange={handleSignerEmailChange}
+                            required>
+                        </lightning-input>
+
+                        <lightning-input
+                            type="text"
+                            name="signerName"
+                            label="Signer Name"
+                            value={signerName}
+                            onchange={handleSignerNameChange}
+                            class="slds-m-top_medium"
+                            required>
+                        </lightning-input>
+                    </div>
+                </div>
+
+                <footer class="slds-modal__footer">
+                    <lightning-button
+                        label="Cancel"
+                        onclick={closeModal}>
+                    </lightning-button>
+                    <lightning-button
+                        label="Send Request"
+                        variant="brand"
+                        onclick={sendSignatureRequest}
+                        disabled={isProcessing}>
+                    </lightning-button>
+                </footer>
+            </div>
+        </section>
+
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+</template> 
 
 
 
@@ -262,199 +435,6 @@
         <div class="slds-backdrop slds-backdrop_open"></div>
     </template>
 </template> -->
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- Developer_build_step_by_step_impl_e_sign v11 -----------------------------------------------------------> -->
-<!-- <template>
-    <lightning-card title="Document Generator" icon-name="standard:document">
-        <div class="slds-card__body slds-card__body_inner">
-
-            <div class="config-section slds-box slds-m-bottom_medium">
-                <h3 class="slds-text-heading_small slds-m-bottom_medium">
-                    Document Configuration
-                </h3>
-                
-                <div class="slds-grid slds-gutters slds-wrap">
-                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
-                        <lightning-combobox
-                            name="region"
-                            label="Region"
-                            value={selectedRegion}
-                            placeholder="Select Region"
-                            options={regionOptions}
-                            onchange={handleRegionChange}
-                            required>
-                        </lightning-combobox>
-                    </div>
-
-                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
-                        <lightning-combobox
-                            name="role"
-                            label="Role"
-                            value={selectedRole}
-                            placeholder="Select Role"
-                            options={roleOptions}
-                            onchange={handleRoleChange}
-                            required>
-                        </lightning-combobox>
-                    </div>
-
-                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
-                        <lightning-combobox
-                            name="contractType"
-                            label="Contract Type"
-                            value={selectedContractType}
-                            placeholder="Select Contract Type"
-                            options={contractTypeOptions}
-                            onchange={handleContractTypeChange}
-                            required>
-                        </lightning-combobox>
-                    </div>
-                </div>
-
-                <div class="slds-m-top_medium">
-                    <lightning-input
-                        name="documentTitle"
-                        label="Document Title"
-                        value={documentTitle}
-                        placeholder="Enter document title"
-                        onchange={handleTitleChange}
-                        required>
-                    </lightning-input>
-                </div>
-            </div>
-
-            <div class="actions-section slds-box slds-m-bottom_medium">
-                <div class="slds-grid slds-gutters">
-                    <div class="slds-col">
-                        <lightning-button
-                            label="Generate Document"
-                            variant="brand"
-                            onclick={generateDocument}
-                            disabled={isGenerating}
-                            class="slds-m-right_small">
-                        </lightning-button>
-
-                        <template if:true={generatedDocument}>
-                            <lightning-button
-                                label="Request Signature"
-                                variant="neutral"
-                                onclick={showSignatureRequest}
-                                class="slds-m-right_small">
-                            </lightning-button>
-                        </template>
-                    </div>
-                </div>
-            </div>
-
-            <template if:true={generatedDocument}>
-                <div class="content-section slds-box">
-                    <h3 class="slds-text-heading_small slds-m-bottom_medium">
-                        Generated Document
-                    </h3>
-
-                    <div class="document-preview slds-box slds-box_small">
-                        <div class="document-header">
-                            <h4 class="slds-text-heading_medium">
-                                {documentTitle}
-                            </h4>
-                            <p class="slds-text-body_small slds-text-color_weak">
-                                Region: {selectedRegion} | Role: {selectedRole} | Type: {selectedContractType}
-                            </p>
-                        </div>
-
-                        <div class="document-content slds-m-top_medium">
-                            <lightning-formatted-rich-text value={generatedClause}>
-                            </lightning-formatted-rich-text>
-                        </div>
-
-                        <div class="compliance-status slds-m-top_medium">
-                            <lightning-badge
-                                label={complianceStatus}
-                                variant={complianceVariant}>
-                            </lightning-badge>
-                        </div>
-                    </div>
-                </div>
-            </template>
-
-            <template if:true={isGenerating}>
-                <div class="loading-section slds-text-align_center slds-p-around_large">
-                    <lightning-spinner 
-                        alternative-text="Generating document..." 
-                        size="medium">
-                    </lightning-spinner>
-                    <p class="slds-m-top_medium">Generating your document...</p>
-                </div>
-            </template>
-        </div>
-    </lightning-card>
-
-    <template if:true={showModal}>
-        <section role="dialog" class="slds-modal slds-fade-in-open">
-            <div class="slds-modal__container">
-
-                <header class="slds-modal__header">
-                    <h2 class="slds-text-heading_medium">Request Signature</h2>
-                </header>
-
-                <div class="slds-modal__content slds-p-around_medium">
-                    <div class="slds-form slds-form_stacked">
-                        <lightning-input
-                            type="email"
-                            name="signerEmail"
-                            label="Signer Email"
-                            value={signerEmail}
-                            onchange={handleSignerEmailChange}
-                            required>
-                        </lightning-input>
-
-                        <lightning-input
-                            type="text"
-                            name="signerName"
-                            label="Signer Name"
-                            value={signerName}
-                            onchange={handleSignerNameChange}
-                            class="slds-m-top_medium"
-                            required>
-                        </lightning-input>
-                    </div>
-                </div>
-
-                <footer class="slds-modal__footer">
-                    <lightning-button
-                        label="Cancel"
-                        onclick={closeModal}>
-                    </lightning-button>
-                    <lightning-button
-                        label="Send Request"
-                        variant="brand"
-                        onclick={sendSignatureRequest}
-                        disabled={isProcessing}>
-                    </lightning-button>
-                </footer>
-            </div>
-        </section>
-
-        <div class="slds-backdrop slds-backdrop_open"></div>
-    </template>
-</template> -->
-
-
 
 
 

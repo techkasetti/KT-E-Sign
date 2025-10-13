@@ -105,7 +105,12 @@ public class WebhookManager {
         Blob signature = Crypto.generateMac('HmacSHA256', payloadBlob, keyBlob);
         return 'sha256=' + EncodingUtil.base64Encode(signature);
     }
-    
+    private static void scheduleWebhookRetry(String subscriptionId, String payload, Integer attemptNumber) {
+  Integer nextMinutes = Math.min(60, attemptNumber * 5);
+  Webhook_Retry__c r = new Webhook_Retry__c(Subscription__c=subscriptionId, Payload__c = payload, Attempt__c = attemptNumber, Scheduled_Time__c = System.now().addMinutes(nextMinutes));
+  insert r;
+}
+
     private static void scheduleWebhookRetry(
         Webhook_Subscription__c subscription, 
         Map<String, Object> payload, 
@@ -159,7 +164,61 @@ public class WebhookManager {
             sendWebhookAsync(request);
         }
     }
-    
+    private static String generateSecuritySignature(String payload, String secretKey) {
+  // HMAC SHA256
+  Blob payloadBlob = Blob.valueOf(payload);
+  Blob keyBlob = Blob.valueOf(secretKey);
+  Blob signature = Crypto.generateMac('HmacSHA256', payloadBlob, keyBlob);
+  return 'sha256=' + EncodingUtil.base64Encode(signature);
+}
+
+private static void scheduleRetry(WebhookRequest req) {
+  // create a retry record with exponential backoff
+  Webhook_Retry__c retry = new Webhook_Retry__c(
+    Payload__c = req.payload,
+    Attempt_Number__c = req.retryCount + 1,
+    Scheduled_Time__c = System.now().addMinutes((req.retryCount+1) * 5)
+  );
+  insert retry;
+}
+
+
+
+
+private static void logWebhookError(String subscriptionId, String statusCode, String body) {
+  try {
+    Webhook_Log__c log = new Webhook_Log__c(Subscription__c = subscriptionId, Success__c = false, Error_Message__c = statusCode + ' : ' + body, Logged_At__c = System.now());
+    insert log;
+  } catch (Exception e) { System.debug('Failed to log webhook error: ' + e.getMessage()); }
+}
+
+@future(callout=true)
+public static void sendWebhookAsync(String subscriptionId, String eventTyp, String payload) {
+  try {
+    // find subscription record
+    Webhook_Subscription__c sub = [SELECT Id, Endpoint_URL__c, Secret_Key__c FROM Webhook_Subscription__c WHERE Id=:subscriptionId LIMIT 1];
+    String signature = generateSecuritySignature(payload, sub.Secret_Key__c);
+    HttpRequest req = new HttpRequest();
+    req.setEndpoint(sub.Endpoint_URL__c);
+    req.setMethod('POST');
+    req.setHeader('Content-Type','application/json');
+    req.setHeader('X-Signature', signature);
+    req.setBody(payload);
+    HttpResponse res = new Http().send(req);
+    if (res.getStatusCode() < 200 || res.getStatusCode() >= 300) {
+      logWebhookError(subscriptionId, res.getStatus(), res.getBody());
+      scheduleWebhookRetry(subscriptionId, payload, 1);
+    } else {
+      // log success
+      Webhook_Log__c log = new Webhook_Log__c(Subscription__c= subscriptionId, Success__c=true, Response__c=res.getBody());
+      insert log;
+    }
+  } catch (Exception e) {
+    logWebhookError(subscriptionId, 'EX', e.getMessage());
+    scheduleWebhookRetry(subscriptionId, payload, 1);
+  }
+}
+
     @Future(callout=true)
     public static void sendWebhookAsync(WebhookRequest request) {
         try {

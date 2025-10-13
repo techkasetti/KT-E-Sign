@@ -5,26 +5,26 @@ public class ClauseGenerator {
     
             String clause = buildDynamicClause(region, role, contractType);
         return clause;
-    }
+    
 
 
 
 
     
-    // try {
-    //         String baseClause = buildDynamicClause(region, role, contractType);
+    try {
+            String baseClause = buildDynamicClause(region, role, contractType);
             
-    //         // Log clause generation
-    //         AuditTrailManager.logSystemActivity('CLAUSE_GENERATED', 
-    //             'Generated clause for: ' + region + '/' + role + '/' + contractType);
+            // Log clause generation
+            AuditTrailManager.logSystemActivity('CLAUSE_GENERATED', 
+                'Generated clause for: ' + region + '/' + role + '/' + contractType);
             
-    //         return baseClause;
+            return baseClause;
             
-    //     } catch (Exception e) {
-    //         AuditTrailManager.logSystemActivity('CLAUSE_GENERATION_ERROR', e.getMessage());
-    //         throw new AuraHandledException('Error generating clause: ' + e.getMessage());
-    //     }
-    // }
+        } catch (Exception e) {
+            AuditTrailManager.logSystemActivity('CLAUSE_GENERATION_ERROR', e.getMessage());
+            throw new AuraHandledException('Error generating clause: ' + e.getMessage());
+        }
+    }
 
     
     

@@ -14,6 +14,21 @@ public class BiometricFusionService {
         public String authLevel;
     }
     
+
+    private static Decimal callLivenessAPI(String base64Image) {
+    HttpRequest req = new HttpRequest();
+    req.setEndpoint('callout:LivenessService/v1/analyze');
+    req.setMethod('POST');
+    req.setHeader('Content-Type','application/json');
+    req.setBody(JSON.serialize(new Map<String,Object>{ 'image' => base64Image }));
+    HttpResponse res = new Http().send(req);
+    if (res.getStatusCode()==200) {
+        Map<String,Object> resp = (Map<String,Object>)JSON.deserializeUntyped(res.getBody());
+        return (Decimal) resp.get('liveness_score');
+    }
+    return 0; // fallback
+}
+
     @AuraEnabled
     public static BiometricScores authenticateUser(Map<String, Object> biometricData) {
         BiometricScores scores = new BiometricScores();

@@ -10,10 +10,7 @@ public class DocumentLifecycleTestSuite {
         Role__c = 'Manager',
         ContractType__c = 'Employment',
         ProcessingStatus__c = 'Draft',
-        Compli
-            ProcessingStatus__c = 'Draft',
-        ComplianceStatus__c = 'Pending'
-            );
+        ComplianceStatus__c = 'Pending');
         insert testDoc;
         
         // Create test signature request

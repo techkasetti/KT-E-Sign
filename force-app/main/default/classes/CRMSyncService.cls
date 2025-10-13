@@ -116,6 +116,35 @@ public class CRMSyncService {
 
         return batchResult;
     }
+// CRMSyncService: minimal helper and future wrapper (gaps flagged) @476 @477 @478
+private static String getPersonIdByEmail(String email, String crmSystem) {
+    // Simplest approach: query local mapping table first; if not found, call CRM API (not implemented)
+    // For now return null to indicate not found so caller can create a contact
+    return null;
+}
+
+@future(callout=true)
+public static void syncWithCRM(String recordId, String crmSystem) {
+    // Future callout wrapper: fetch signature request, prepare payload, call CRM using named credential
+    try {
+        // fetch minimal fields
+        Signature_Request__c r = [SELECT Id, SignerEmail__c, SignerName__c, Payment_Status__c FROM Signature_Request__c WHERE Id = :recordId LIMIT 1];
+        if (r == null) return;
+        // Build payload
+        Map<String,Object> payload = new Map<String,Object>{ 'email' => r.SignerEmail__c, 'name' => r.SignerName__c, 'status' => r.Payment_Status__c};
+        // Choose endpoint and auth (using named credentials via getCRMAuthHeader or Named Credential)
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint('callout:CRM_Integration/contacts');
+        req.setMethod('POST');
+        req.setHeader('Content-Type','application/json');
+        req.setBody(JSON.serialize(payload));
+        Http http = new Http();
+        HttpResponse res = http.send(req);
+        // log success or create CRM_Sync_Record__c
+    } catch (Exception e) {
+        // log via AuditTrailManager
+    }
+}
 
     private static Map<String, Object> prepareCRMPayload(Signature_Request__c request, String crmSystem) {
         Map<String, Object> payload = new Map<String, Object>();

@@ -16,9 +16,7 @@
                                         // Score for signature requirement
                                         if (clause.contains('electronic signature')) score += 25;
                                         
-                                        // Score for regional compliance
-                                        if (validateRegionalCompliance(clause,
-                                        if (validateRegionalCompliance(clause, region)) score += 25;
+                                        
                                         
                                         // Score for contract type compliance
                                         if (validateContractTypeCompliance(clause, contractType)) score += 20;
@@ -104,41 +102,41 @@
                                         result.recommendations = generateComplianceRecommendations(violations);
                                         
                                         return result;
+                                    
+                                    
+                                    
+                                    
+                                    
+                                    
+                                    
+                                    
+                                    
+                                    
+                                                ComplianceValidationResult result = new ComplianceValidationResult();
+                                    
+                                            try {
+                                                    // Perform validation checks
+                                                    validateRegionalCompliance(clause, region, result.violations);
+                                                    validateContractTypeCompliance(clause, contractType, result.violations);
+                                                    validateGeneralCompliance(clause, result.violations);
+                                        
+                                                    // Calculate compliance score
+                                                    result.complianceScore = calculateComplianceScore(result.violations);
+                                                    result.isCompliant = result.complianceScore >= 75.0;
+                                        
+                                                    // Generate recommendations
+                                                    result.recommendations = generateComplianceRecommendations(result.violations, result.complianceScore);
+                                        
+                                                    return result;
+                                        
+                                            } catch (Exception e) {
+                                                    result.isCompliant = false;
+                                        result.violations.add('Compliance validation failed: ' + e.getMessage());
+                                        result.complianceScore = 0;
+                                        result.recommendations.add('Please contact system administrator for compliance validation issues');
+                                        return result;
                                     }
-                                    
-                                    
-                                    
-                                    
-                                    
-                                    
-                                    
-                                    
-                                    
-                                    //             ComplianceValidationResult result = new ComplianceValidationResult();
-                                    
-                                    //         try {
-                                        //             // Perform validation checks
-                                        //             validateRegionalCompliance(clause, region, result.violations);
-                                        //             validateContractTypeCompliance(clause, contractType, result.violations);
-                                        //             validateGeneralCompliance(clause, result.violations);
-                                        
-                                        //             // Calculate compliance score
-                                        //             result.complianceScore = calculateComplianceScore(result.violations);
-                                        //             result.isCompliant = result.complianceScore >= 75.0;
-                                        
-                                        //             // Generate recommendations
-                                        //             result.recommendations = generateComplianceRecommendations(result.violations, result.complianceScore);
-                                        
-                                        //             return result;
-                                        
-                                    //         } catch (Exception e) {
-                                        //             result.isCompliant = false;
-                                        // result.violations.add('Compliance validation failed: ' + e.getMessage());
-                                        // result.complianceScore = 0;
-                                        // result.recommendations.add('Please contact system administrator for compliance validation issues');
-                                        // return result;
-                                    // }
-                                //     }
+                                    }
                                 
                                 
                                 

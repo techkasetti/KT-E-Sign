@@ -1,11 +1,182 @@
 public class PaymentGatewayService {
+    private static final String ENDPOINT = 'callout:Payment_Gateway'; // Named Credential
+public class PaymentRequest {
+    @AuraEnabled public Id signatureRequestId;
+    @AuraEnabled public Decimal amount;
+    @AuraEnabled public String currency;
+    @AuraEnabled public String paymentMethodToken;
+  }
+
+  public class PaymentResult {
+    @AuraEnabled public Boolean success;
+    @AuraEnabled public String message;
+    @AuraEnabled public String externalId;
+    public PaymentResult(Boolean s, String m, String id){ success=s; message=m; externalId=id;}
+  }
+@future(callout=true)
+public static void processPaymentAsync(Id signatureRequestId, Map<String,Object> paymentData) {
+    // lookup request
+    Signature_Request__c req = [SELECT Id, Amount__c FROM Signature_Request__c WHERE Id=:signatureRequestId LIMIT 1];
+    // build request
+    HttpRequest r = new HttpRequest();
+    r.setEndpoint('callout:PaymentGateway/charges');
+    r.setMethod('POST');
+    r.setHeader('Content-Type','application/json');
+    // using Named Credential for auth is recommended
+    r.setBody(JSON.serialize(paymentData));
+    Http http = new Http();
+    try {
+        HttpResponse res = http.send(r);
+        if (res.getStatusCode() == 200 || res.getStatusCode() == 201) {
+            // parse and persist transaction
+            Map<String,Object> response = (Map<String,Object>)JSON.deserializeUntyped(res.getBody());
+            Payment_Transaction__c t = new Payment_Transaction__c(Signature_Request__c = req.Id, External_Id__c = (String) response.get('id'), Amount__c = req.Amount__c, Status__c = 'COMPLETED');
+            insert t;
+        } else {
+            // log failure & persist
+            Payment_Transaction__c t = new Payment_Transaction__c(Signature_Request__c = req.Id, Amount__c = req.Amount__c, Status__c = 'FAILED', ErrorMessage__c = res.getBody());
+            insert t;
+        }
+    } catch (Exception e) {
+        System.debug('Payment callout failure: ' + e.getMessage());
+    }
+}
+
+  @AuraEnabled
+  public static PaymentResult processPayment(PaymentRequest req) {
+    try {
+      // validate request state
+      Signature_Request__c sr = [SELECT Id, Status__c FROM Signature_Request__c WHERE Id=:req.signatureRequestId LIMIT 1];
+      if (sr == null) return new PaymentResult(false, 'Signature request not found', null);
+      HttpRequest r = new HttpRequest();
+      r.setEndpoint(ENDPOINT + '/v1/payments');
+      r.setMethod('POST');
+      r.setHeader('Content-Type','application/json');
+      Map<String,Object> body = new Map<String,Object>{
+        'amount' => req.amount,
+        'currency' => req.currency,
+        'payment_method_token' => req.paymentMethodToken,
+        'reference' => 'SigReq:' + String.valueOf(req.signatureRequestId)
+      };
+      r.setBody(JSON.serialize(body));
+      // Using Named Credential handles auth; do NOT construct Authorization header manually
+      Http http = new Http();
+      HttpResponse resp = http.send(r);
+      Integer status = resp.getStatusCode();
+      if (status == 200 || status == 201) {
+        Map<String,Object> jr = (Map<String,Object>) JSON.deserializeUntyped(resp.getBody());
+        String extId = (String) jr.get('id');
+        // record payment
+        Signature_Payment__c pay = new Signature_Payment__c(
+          Signature_Request__c = req.signatureRequestId,
+          Amount__c = req.amount,
+          External_Id__c = extId,
+          Status__c = 'Completed'
+        );
+        insert pay;
+        // Update signature request if desired
+        sr.Status__c = 'Signed';
+        update sr;
+        return new PaymentResult(true, 'Payment processed', extId);
+      } else {
+        return new PaymentResult(false, 'Gateway error: ' + resp.getBody(), null);
+      }
+    } catch (Exception e) {
+      AuditTrailManager.logSystemActivity('PAYMENT_ERROR', 'Payment exception: ' + e.getMessage()); //@14
+      return new PaymentResult(false, 'Exception: ' + e.getMessage(), null);
+    }
+  }
+@AuraEnabled
+    public static PaymentResult processPayment(PaymentRequest request) {
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint(ENDPOINT + '/payments');
+        req.setMethod('POST');
+        req.setHeader('Content-Type','application/json');
+        // Use Named Credential auth; do NOT compose Authorization header with inline secrets
+        Map<String,Object> payload = new Map<String,Object>{
+            'amount' => request.amount,
+            'currency' => request.currency,
+            'method' => request.paymentMethod,
+            'metadata' => new Map<String,String>{'signatureRequestId' => String.valueOf(request.signatureRequestId)}
+        };
+        req.setBody(JSON.serialize(payload));
+        Http http = new Http();
+        HttpResponse res = http.send(req);
+        if (res.getStatusCode() == 200 || res.getStatusCode() == 201) {
+            // parse response
+            return new PaymentResult(true,'Payment processed', JSON.deserializeUntyped(res.getBody()));
+        } else {
+            return new PaymentResult(false,'Gateway error: ' + res.getBody());
+        }
+    }
+
+
+
     @future(callout=true)
     public static void processPayment(String signatureRequestId, Decimal amount) {
-        // Stripe/PayPal integration
-        // Payment processing
-        // Transaction logging
-        // Failure handling
+      // canonical: in ESignatureAPIController.updateSignatureRequest (finish processing and verify)
+Signature_Request__c existingRequest = [SELECT Id, DocumentId__c, Status__c, DocumentHash__c
+    FROM Signature_Request__c WHERE Id = :signatureRequestId LIMIT 1];
+
+// compute received document hash (helper must be implemented)
+String receivedHash = SecurityUtils.computeSha256Base64(receivedDocumentContent);
+
+// verify
+if (existingRequest.DocumentHash__c == null || existingRequest.DocumentHash__c != receivedHash) {
+    // Record failure and return 409 or 400 depending policy
+    AuditTrailManager.createAuditEntry(existingRequest.Id, 'DOCUMENT_HASH_MISMATCH', 'ERROR',
+        'Hash mismatch during signature submission');
+    return new APIResponse(409, 'Document hash mismatch – signature rejected', null);
+}
+
+// proceed to mark request Signed, insert validation record, send notifications
+existingRequest.Status__c = 'Signed';
+existingRequest.CompletedDate__c = System.now();
+update existingRequest;
     }
+
+
+
+
+    @AuraEnabled
+  public static PaymentResult processSignaturePayment(Id signatureRequestId, Decimal amount, String paymentMethodToken) {
+    try {
+      // validate request
+      Signature_Request__c req = [SELECT Id, Status__c FROM Signature_Request__c WHERE Id = :signatureRequestId LIMIT 1];
+      // prepare payload
+      Map<String,Object> payload = new Map<String,Object>{
+        'amount' => amount,
+        'currency' => 'USD',
+        'payment_method_token' => paymentMethodToken,
+        'reference' => 'SigReq:' + String.valueOf(signatureRequestId)
+      };
+      // callout using Named Credential (PaymentGateway)
+      HttpRequest r = new HttpRequest();
+      r.setEndpoint('callout:PaymentGateway/v1/payments');
+      r.setMethod('POST');
+      r.setHeader('Content-Type','application/json');
+      r.setBody(JSON.serialize(payload));
+      // Using Named Credential avoids manual Authorization header
+      Http http = new Http();
+      HttpResponse resp = http.send(r);
+      if (resp.getStatusCode() == 201) {
+        Map<String,Object> respJson = (Map<String,Object>) JSON.deserializeUntyped(resp.getBody());
+        // create and link payment record
+        Signature_Payment__c p = new Signature_Payment__c(
+          Signature_Request__c = signatureRequestId,
+          Amount__c = amount,
+          External_Id__c = (String) respJson.get('id'),
+          Status__c = 'COMPLETED'
+        );
+        insert p;
+        return new PaymentResult(true, 'OK', p.Id);
+      } else {
+        return new PaymentResult(false, 'Gateway failure: ' + resp.getBody(), null);
+      }
+    } catch (Exception e) {
+      return new PaymentResult(false, 'Exception: ' + e.getMessage(), null);
+    }
+  }
         @AuraEnabled
     public static PaymentResult processSignaturePayment(Id signatureRequestId, Map<String, Object> paymentData) {
         try {

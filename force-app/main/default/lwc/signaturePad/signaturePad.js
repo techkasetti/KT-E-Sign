@@ -1,252 +1,238 @@
+import { LightningElement, api, track, wire } from 'lwc';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import { refreshApex } from '@salesforce/apex';
 
+import getDocumentData from '@salesforce/apex/DocumentController.getDocumentData';
+import createSignatureRequest from '@salesforce/apex/SignatureRequestController.createSignatureRequest';
+import getAuditTrail from '@salesforce/apex/AuditTrailManager.getAuditTrail';
 
+export default class DocumentViewer extends LightningElement {
+    @api recordId;
+    @track documentData = null;
+    @track showSignatureModal = false;
+    @track showAuditModal = false;
+    @track newSignerEmail = '';
+    @track newSignerName = '';
+    @track personalMessage = '';
+    @track isCreatingRequest = false;
+    @track auditTrailData = null;
 
+    wiredDocumentData;
 
+    get signatureColumns() {
+        return [
+            { label: 'Signer Name', fieldName: 'SignerName__c', type: 'text' },
+            { label: 'Signer Email', fieldName: 'SignerEmail__c', type: 'email' },
+            { 
+                label: 'Status', 
+                fieldName: 'Status__c', 
+                type: 'text',
+                cellAttributes: { class: { fieldName: 'statusClass' } }
+            },
+            { 
+                label: 'Created Date', 
+                fieldName: 'CreatedDate', 
+                type: 'date',
+                typeAttributes: { year: 'numeric', month: '2-digit', day: '2-digit' }
+            },
+            { 
+                label: 'Completed Date', 
+                fieldName: 'CompletedDate__c', 
+                type: 'date',
+                typeAttributes: { year: 'numeric', month: '2-digit', day: '2-digit' }
+            },
+            {
+                type: 'action',
+                typeAttributes: {
+                    rowActions: [
+                        { label: 'View Signature', name: 'view_signature' },
+                        { label: 'Resend Request', name: 'resend_request' }
+                    ]
+                }
+            }
+        ];
+    }
 
+    get auditColumns() {
+        return [
+            { label: 'Action', fieldName: 'Action__c', type: 'text' },
+            { label: 'Status', fieldName: 'Status__c', type: 'text' },
+            { label: 'Details', fieldName: 'Details__c', type: 'text', wrapText: true },
+            { 
+                label: 'Timestamp', 
+                fieldName: 'Timestamp__c', 
+                type: 'date',
+                typeAttributes: { 
+                    year: 'numeric', month: '2-digit', day: '2-digit', 
+                    hour: '2-digit', minute: '2-digit' 
+                }
+            }
+        ];
+    }
 
+    get signatureRequests() {
+        if (this.documentData && this.documentData.signatureRequests) {
+            return this.documentData.signatureRequests.map(request => ({
+                ...request,
+                statusClass: this.getStatusClass(request.Status__c)
+            }));
+        }
+        return [];
+    }
 
+    get hasSignatureRequests() {
+        return this.signatureRequests && this.signatureRequests.length > 0;
+    }
 
+    get complianceVariant() {
+        if (this.documentData && this.documentData.document) {
+            const status = this.documentData.document.ComplianceStatus__c;
+            return status === 'Compliant' ? 'success' : 'warning';
+        }
+        return 'inverse';
+    }
 
+    @wire(getDocumentData, { documentId: '$recordId' })
+    wiredGetDocumentData(result) {
+        this.wiredDocumentData = result;
+        if (result.data) {
+            this.documentData = result.data;
+        } else if (result.error) {
+            this.showToast('Error', 'Failed to load document data', 'error');
+            console.error('Wire Error:', result.error);
+        }
+    }
 
+    getStatusClass(status) {
+        switch (status) {
+            case 'Completed':
+            case 'Signed':
+                return 'slds-text-color_success';
+            case 'Pending':
+                return 'slds-text-color_default';
+            case 'Rejected':
+                return 'slds-text-color_error';
+            default:
+                return 'slds-text-color_weak';
+        }
+    }
 
+    showSignatureRequestModal() {
+        this.showSignatureModal = true;
+    }
 
+    closeSignatureModal() {
+        this.showSignatureModal = false;
+        this.newSignerEmail = '';
+        this.newSignerName = '';
+        this.personalMessage = '';
+    }
 
-// Developer_build_step_by_step_impl_e_sign v11 -/----------------------------------------------------
-// import { LightningElement, api, track, wire } from 'lwc';
-// import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-// import { refreshApex } from '@salesforce/apex';
+    handleNewSignerEmailChange(event) {
+        this.newSignerEmail = event.detail.value;
+    }
 
-// import getDocumentData from '@salesforce/apex/DocumentController.getDocumentData';
-// import createSignatureRequest from '@salesforce/apex/SignatureRequestController.createSignatureRequest';
-// import getAuditTrail from '@salesforce/apex/AuditTrailManager.getAuditTrail';
+    handleNewSignerNameChange(event) {
+        this.newSignerName = event.detail.value;
+    }
 
-// export default class DocumentViewer extends LightningElement {
-//     @api recordId;
-//     @track documentData = null;
-//     @track showSignatureModal = false;
-//     @track showAuditModal = false;
-//     @track newSignerEmail = '';
-//     @track newSignerName = '';
-//     @track personalMessage = '';
-//     @track isCreatingRequest = false;
-//     @track auditTrailData = null;
+    handlePersonalMessageChange(event) {
+        this.personalMessage = event.detail.value;
+    }
 
-//     wiredDocumentData;
+    async createSignatureRequest() {
+        if (!this.newSignerEmail || !this.newSignerName) {
+            this.showToast('Error', 'Please enter both signer email and name', 'error');
+            return;
+        }
 
-//     get signatureColumns() {
-//         return [
-//             { label: 'Signer Name', fieldName: 'SignerName__c', type: 'text' },
-//             { label: 'Signer Email', fieldName: 'SignerEmail__c', type: 'email' },
-//             { 
-//                 label: 'Status', 
-//                 fieldName: 'Status__c', 
-//                 type: 'text',
-//                 cellAttributes: { class: { fieldName: 'statusClass' } }
-//             },
-//             { 
-//                 label: 'Created Date', 
-//                 fieldName: 'CreatedDate', 
-//                 type: 'date',
-//                 typeAttributes: { year: 'numeric', month: '2-digit', day: '2-digit' }
-//             },
-//             { 
-//                 label: 'Completed Date', 
-//                 fieldName: 'CompletedDate__c', 
-//                 type: 'date',
-//                 typeAttributes: { year: 'numeric', month: '2-digit', day: '2-digit' }
-//             },
-//             {
-//                 type: 'action',
-//                 typeAttributes: {
-//                     rowActions: [
-//                         { label: 'View Signature', name: 'view_signature' },
-//                         { label: 'Resend Request', name: 'resend_request' }
-//                     ]
-//                 }
-//             }
-//         ];
-//     }
+        this.isCreatingRequest = true;
+        try {
+            const result = await createSignatureRequest({
+                documentId: this.recordId,
+                signerEmail: this.newSignerEmail,
+                signerName: this.newSignerName
+            });
 
-//     get auditColumns() {
-//         return [
-//             { label: 'Action', fieldName: 'Action__c', type: 'text' },
-//             { label: 'Status', fieldName: 'Status__c', type: 'text' },
-//             { label: 'Details', fieldName: 'Details__c', type: 'text', wrapText: true },
-//             { 
-//                 label: 'Timestamp', 
-//                 fieldName: 'Timestamp__c', 
-//                 type: 'date',
-//                 typeAttributes: { 
-//                     year: 'numeric', month: '2-digit', day: '2-digit', 
-//                     hour: '2-digit', minute: '2-digit' 
-//                 }
-//             }
-//         ];
-//     }
+            if (result.success) {
+                this.showToast('Success', 'Signature request created successfully', 'success');
+                this.closeSignatureModal();
+                return refreshApex(this.wiredDocumentData);
+            } else {
+                this.showToast('Error', result.errorMessage, 'error');
+            }
+        } catch (error) {
+            this.showToast('Error', 'Failed to create signature request', 'error');
+            console.error('Create Signature Request Error:', error);
+        } finally {
+            this.isCreatingRequest = false;
+        }
+    }
 
-//     get signatureRequests() {
-//         if (this.documentData && this.documentData.signatureRequests) {
-//             return this.documentData.signatureRequests.map(request => ({
-//                 ...request,
-//                 statusClass: this.getStatusClass(request.Status__c)
-//             }));
-//         }
-//         return [];
-//     }
+    async showAuditTrail() {
+        this.showAuditModal = true;
+        try {
+            const auditData = await getAuditTrail({ recordId: this.recordId, limitCount: 50 });
+            this.auditTrailData = auditData;
+        } catch (error) {
+            this.showToast('Error', 'Failed to load audit trail', 'error');
+            console.error('Load Audit Trail Error:', error);
+        }
+    }
 
-//     get hasSignatureRequests() {
-//         return this.signatureRequests && this.signatureRequests.length > 0;
-//     }
+    closeAuditModal() {
+        this.showAuditModal = false;
+        this.auditTrailData = null;
+    }
 
-//     get complianceVariant() {
-//         if (this.documentData && this.documentData.document) {
-//             const status = this.documentData.document.ComplianceStatus__c;
-//             return status === 'Compliant' ? 'success' : 'warning';
-//         }
-//         return 'inverse';
-//     }
+    handleRowAction(event) {
+        const actionName = event.detail.action.name;
+        const row = event.detail.row;
 
-//     @wire(getDocumentData, { documentId: '$recordId' })
-//     wiredGetDocumentData(result) {
-//         this.wiredDocumentData = result;
-//         if (result.data) {
-//             this.documentData = result.data;
-//         } else if (result.error) {
-//             this.showToast('Error', 'Failed to load document data', 'error');
-//             console.error('Wire Error:', result.error);
-//         }
-//     }
+        switch (actionName) {
+            case 'view_signature':
+                this.viewSignature(row.Id);
+                break;
+            case 'resend_request':
+                this.resendRequest(row.Id);
+                break;
+        }
+    }
 
-//     getStatusClass(status) {
-//         switch (status) {
-//             case 'Completed':
-//             case 'Signed':
-//                 return 'slds-text-color_success';
-//             case 'Pending':
-//                 return 'slds-text-color_default';
-//             case 'Rejected':
-//                 return 'slds-text-color_error';
-//             default:
-//                 return 'slds-text-color_weak';
-//         }
-//     }
+    viewSignature(requestId) {
+        // Navigate to signature request record
+        window.open(`/lightning/r/Signature_Request__c/${requestId}/view`, '_blank');
+    }
 
-//     showSignatureRequestModal() {
-//         this.showSignatureModal = true;
-//     }
+    async resendRequest(requestId) {
+        try {
+            // Logic to resend signature request would go here
+            this.showToast('Info', 'Resend functionality to be implemented', 'info');
+        } catch (error) {
+            this.showToast('Error', 'Failed to resend request', 'error');
+            console.error('Resend Request Error:', error);
+        }
+    }
 
-//     closeSignatureModal() {
-//         this.showSignatureModal = false;
-//         this.newSignerEmail = '';
-//         this.newSignerName = '';
-//         this.personalMessage = '';
-//     }
+    async downloadPDF() {
+        try {
+            // PDF download logic would go here
+            this.showToast('Info', 'PDF download functionality to be implemented', 'info');
+        } catch (error) {
+            this.showToast('Error', 'Failed to download PDF', 'error');
+            console.error('Download PDF Error:', error);
+        }
+    }
 
-//     handleNewSignerEmailChange(event) {
-//         this.newSignerEmail = event.detail.value;
-//     }
-
-//     handleNewSignerNameChange(event) {
-//         this.newSignerName = event.detail.value;
-//     }
-
-//     handlePersonalMessageChange(event) {
-//         this.personalMessage = event.detail.value;
-//     }
-
-//     async createSignatureRequest() {
-//         if (!this.newSignerEmail || !this.newSignerName) {
-//             this.showToast('Error', 'Please enter both signer email and name', 'error');
-//             return;
-//         }
-
-//         this.isCreatingRequest = true;
-//         try {
-//             const result = await createSignatureRequest({
-//                 documentId: this.recordId,
-//                 signerEmail: this.newSignerEmail,
-//                 signerName: this.newSignerName
-//             });
-
-//             if (result.success) {
-//                 this.showToast('Success', 'Signature request created successfully', 'success');
-//                 this.closeSignatureModal();
-//                 return refreshApex(this.wiredDocumentData);
-//             } else {
-//                 this.showToast('Error', result.errorMessage, 'error');
-//             }
-//         } catch (error) {
-//             this.showToast('Error', 'Failed to create signature request', 'error');
-//             console.error('Create Signature Request Error:', error);
-//         } finally {
-//             this.isCreatingRequest = false;
-//         }
-//     }
-
-//     async showAuditTrail() {
-//         this.showAuditModal = true;
-//         try {
-//             const auditData = await getAuditTrail({ recordId: this.recordId, limitCount: 50 });
-//             this.auditTrailData = auditData;
-//         } catch (error) {
-//             this.showToast('Error', 'Failed to load audit trail', 'error');
-//             console.error('Load Audit Trail Error:', error);
-//         }
-//     }
-
-//     closeAuditModal() {
-//         this.showAuditModal = false;
-//         this.auditTrailData = null;
-//     }
-
-//     handleRowAction(event) {
-//         const actionName = event.detail.action.name;
-//         const row = event.detail.row;
-
-//         switch (actionName) {
-//             case 'view_signature':
-//                 this.viewSignature(row.Id);
-//                 break;
-//             case 'resend_request':
-//                 this.resendRequest(row.Id);
-//                 break;
-//         }
-//     }
-
-//     viewSignature(requestId) {
-//         // Navigate to signature request record
-//         window.open(`/lightning/r/Signature_Request__c/${requestId}/view`, '_blank');
-//     }
-
-//     async resendRequest(requestId) {
-//         try {
-//             // Logic to resend signature request would go here
-//             this.showToast('Info', 'Resend functionality to be implemented', 'info');
-//         } catch (error) {
-//             this.showToast('Error', 'Failed to resend request', 'error');
-//             console.error('Resend Request Error:', error);
-//         }
-//     }
-
-//     async downloadPDF() {
-//         try {
-//             // PDF download logic would go here
-//             this.showToast('Info', 'PDF download functionality to be implemented', 'info');
-//         } catch (error) {
-//             this.showToast('Error', 'Failed to download PDF', 'error');
-//             console.error('Download PDF Error:', error);
-//         }
-//     }
-
-//     showToast(title, message, variant) {
-//         const evt = new ShowToastEvent({
-//             title: title,
-//             message: message,
-//             variant: variant
-//         });
-//         this.dispatchEvent(evt);
-//     }
-// }
+    showToast(title, message, variant) {
+        const evt = new ShowToastEvent({
+            title: title,
+            message: message,
+            variant: variant
+        });
+        this.dispatchEvent(evt);
+    }
+}
 
 
 
@@ -2136,5 +2122,5 @@
 //             variant: variant
 //         });
 //         this.dispatchEvent(evt);
-    }
-}
+  //  }
+//}

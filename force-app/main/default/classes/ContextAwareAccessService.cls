@@ -68,8 +68,7 @@ public class ContextAwareAccessService {
         }
     }
     
-    private static UserContextResult evaluateUserContext(String userId, Map<String, Object> context) {
-        UserContextResult result =
+    
 private static UserContextResult evaluateUserContext(String userId, Map<String, Object> context) {
         UserContextResult result = new UserContextResult();
         result.score = 0.5; // Base score
@@ -459,7 +458,7 @@ private static UserContextResult evaluateUserContext(String userId, Map<String, 
                         result.factors.add('Access within allowed time window');
                     } else {
                         result.score -= 0.5;
-                        result.factors.add('Access outside allowed time
+                       
                 result.factors.add('Access outside allowed time');
             }
         }
@@ -484,14 +483,15 @@ private static UserContextResult evaluateUserContext(String userId, Map<String, 
         }
     }
     
-    // Step 4: Check for unusual access velocity
-    List<UserSession__c> recentSessions = [
-        SELECT Id, CreatedDate, Duration__c
-        FROM UserSession__c
-        WHERE UserId__c = :userId
-        AND CreatedDate = LAST_N_HOURS:1
-        ORDER BY CreatedDate DESC
-    ];
+   DateTime oneHourAgo = System.now().addHours(-1);
+List<UserSession__c> recentSessions = [
+    SELECT Id, CreatedDate, Duration__c
+    FROM UserSession__c
+    WHERE UserId__c = :userId
+      AND CreatedDate >= :oneHourAgo
+    ORDER BY CreatedDate DESC
+];
+
     
     if (recentSessions.size() > 5) {
         result.score -= 0.3;
