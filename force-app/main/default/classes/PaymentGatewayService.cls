@@ -15,32 +15,29 @@ public class PaymentRequest {
   }
 @future(callout=true)
 public static void processPaymentAsync(Id signatureRequestId, Map<String,Object> paymentData) {
-    // lookup request
-    Signature_Request__c req = [SELECT Id, Amount__c FROM Signature_Request__c WHERE Id=:signatureRequestId LIMIT 1];
-    // build request
-    HttpRequest r = new HttpRequest();
-    r.setEndpoint('callout:PaymentGateway/charges');
-    r.setMethod('POST');
-    r.setHeader('Content-Type','application/json');
-    // using Named Credential for auth is recommended
-    r.setBody(JSON.serialize(paymentData));
+    Signature_Request__c r = [SELECT Id, Amount__c FROM Signature_Request__c WHERE Id = :signatureRequestId LIMIT 1];
+    HttpRequest req = new HttpRequest();
+    req.setEndpoint('callout:PaymentGateway/charges');
+    req.setMethod('POST');
+    req.setHeader('Content-Type','application/json');
+    req.setBody(JSON.serialize(paymentData));
     Http http = new Http();
     try {
-        HttpResponse res = http.send(r);
+        HttpResponse res = http.send(req);
         if (res.getStatusCode() == 200 || res.getStatusCode() == 201) {
-            // parse and persist transaction
-            Map<String,Object> response = (Map<String,Object>)JSON.deserializeUntyped(res.getBody());
-            Payment_Transaction__c t = new Payment_Transaction__c(Signature_Request__c = req.Id, External_Id__c = (String) response.get('id'), Amount__c = req.Amount__c, Status__c = 'COMPLETED');
-            insert t;
+            Map<String,Object> resp = (Map<String,Object>) JSON.deserializeUntyped(res.getBody());
+            Payment_Transaction__c tx = new Payment_Transaction__c(Signature_Request__c = r.Id, Amount__c = r.Amount__c, External_Id__c = (String)resp.get('id'), Payment_Status__c = 'COMPLETED');
+            insert tx;
         } else {
-            // log failure & persist
-            Payment_Transaction__c t = new Payment_Transaction__c(Signature_Request__c = req.Id, Amount__c = req.Amount__c, Status__c = 'FAILED', ErrorMessage__c = res.getBody());
-            insert t;
+            Payment_Transaction__c tx = new Payment_Transaction__c(Signature_Request__c = r.Id, Amount__c = r.Amount__c, Payment_Status__c = 'FAILED', Error_Message__c = res.getBody());
+            insert tx;
         }
     } catch (Exception e) {
-        System.debug('Payment callout failure: ' + e.getMessage());
+        System.debug('Payment callout failed: ' + e.getMessage());
+        // optionally create a failure record
     }
 }
+
 
   @AuraEnabled
   public static PaymentResult processPayment(PaymentRequest req) {

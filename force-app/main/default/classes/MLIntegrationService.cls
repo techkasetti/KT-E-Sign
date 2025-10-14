@@ -51,6 +51,41 @@ public class MLIntegrationService {
         return result;
     }
     
+
+
+    
+    public static DocumentClassificationResult classifyDocument(String docText) {
+        try {
+            HttpRequest req = new HttpRequest();
+            req.setEndpoint('callout:ML_Service/classify');
+            req.setMethod('POST');
+            req.setHeader('Content-Type','application/json');
+            req.setBody(JSON.serialize(new Map<String,Object>{'text'=>docText}));
+            Http http = new Http();
+            HttpResponse res = http.send(req);
+            if (res.getStatusCode() == 200) {
+                // Expect strict JSON schema
+                Map<String,Object> body = (Map<String,Object>) JSON.deserializeUntyped(res.getBody());
+                DocumentClassificationResult out = new DocumentClassificationResult();
+                out.success = Boolean.valueOf(body.get('success') == null ? true : (Boolean)body.get('success'));
+                out.classification = (String) body.get('classification');
+                out.confidence = body.containsKey('confidence') ? ((Decimal)body.get('confidence')) : 0;
+                out.keyPhrases = body.containsKey('keyPhrases') ? (List<String>) body.get('keyPhrases') : new List<String>();
+                out.rawResponse = res.getBody();
+                return out;
+            } else {
+                // store raw response for human review (AIInsight__c)
+                AIInsight__c ai = new AIInsight__c(DocumentId__c = null, Insight_Type__c='CLASSIFY_ERROR', Confidence_Score__c = 0, Insight_Content__c = res.getBody());
+                insert ai;
+                DocumentClassificationResult out = new DocumentClassificationResult(); out.success=false; out.rawResponse = res.getBody(); return out;
+            }
+        } catch (Exception e) {
+            String raw = 'ML callout failed: ' + e.getMessage();
+            AIInsight__c ai = new AIInsight__c(DocumentId__c = null, Insight_Type__c='CLASSIFY_EXCEPTION', Confidence_Score__c = 0, Insight_Content__c = raw);
+            try { insert ai; } catch (Exception x) { System.debug('AIInsight insert failed: ' + x.getMessage()); }
+            DocumentClassificationResult out = new DocumentClassificationResult(); out.success=false; out.rawResponse = raw; return out;
+        }
+    }
     /**
      * Call ML model for fraud detection scoring
      */

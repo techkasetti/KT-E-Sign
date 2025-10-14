@@ -1,4 +1,4 @@
-                                public class ComplianceChecker {
+public class ComplianceChecker {
                                     
                                     private static Decimal calculateComplianceScore(List<String> violations) {
                                         Integer maxPossibleViolations = 10; // Maximum expected violations
@@ -67,79 +67,47 @@
                                             }
                                         }
                                         
-                                        return recommendations;
-                                    }
+ return recommendations;
+  }
                                     
-                                    @AuraEnabled
-                                    public static ComplianceValidationResult validateCompliance(String clause, String region, String contractType) {
-                                        
-                                        
-                                        ComplianceValidationResult result = new ComplianceValidationResult();
-                                        List<String> violations = new List<String>();
-                                        List<String> recommendations = new List<String>();
-                                        
-                                        // Validate regional compliance
-                                        if (!validateRegionalCompliance(clause, region)) {
-                                            violations.add('Regional compliance requirements not met for: ' + region);
-                                        }
-                                        
-                                        // Validate contract type compliance
-                                        if (!validateContractTypeCompliance(clause, contractType)) {
-                                            violations.add('Contract type requirements not met for: ' + contractType);
-                                        }
-                                        
-                                        // Validate general compliance
-                                        if (!validateGeneralCompliance(clause)) {
-                                            violations.add('General compliance requirements not met');
-                                        }
-                                        
-                                        // Calculate compliance score
-                                        Integer score = calculateComplianceScore(clause, region, contractType);
-                                        
-                                        result.isCompliant = violations.isEmpty() && score >= 80;
-                                        result.violations = violations;
-                                        result.score = score;
-                                        result.recommendations = generateComplianceRecommendations(violations);
-                                        
-                                        return result;
-                                    
-                                    
-                                    
-                                    
-                                    
-                                    
-                                    
-                                    
-                                    
-                                    
-                                                ComplianceValidationResult result = new ComplianceValidationResult();
-                                    
-                                            try {
-                                                    // Perform validation checks
-                                                    validateRegionalCompliance(clause, region, result.violations);
-                                                    validateContractTypeCompliance(clause, contractType, result.violations);
-                                                    validateGeneralCompliance(clause, result.violations);
-                                        
-                                                    // Calculate compliance score
-                                                    result.complianceScore = calculateComplianceScore(result.violations);
-                                                    result.isCompliant = result.complianceScore >= 75.0;
-                                        
-                                                    // Generate recommendations
-                                                    result.recommendations = generateComplianceRecommendations(result.violations, result.complianceScore);
-                                        
-                                                    return result;
-                                        
-                                            } catch (Exception e) {
-                                                    result.isCompliant = false;
-                                        result.violations.add('Compliance validation failed: ' + e.getMessage());
-                                        result.complianceScore = 0;
-                                        result.recommendations.add('Please contact system administrator for compliance validation issues');
-                                        return result;
-                                    }
-                                    }
-                                
-                                
-                                
+@AuraEnabled
+public static ComplianceValidationResult validateCompliance(String clause, String region, String contractType) {
+        ComplianceValidationResult r = new ComplianceValidationResult();
+        try {
+            // Basic checks
+            if (String.isBlank(clause) || clause.length() < 100) {
+                r.violations.add('Clause content insufficient length');
+            }
+            // eIDAS/GDPR sample check
+            if ('EU' == region && !clause.toLowerCase().contains('gdpr') && !clause.toLowerCase().contains('data protection')) {
+                r.violations.add('Missing GDPR/data protection clause for EU region');
+            }
+            // Signature validity check
+            if (!clause.toLowerCase().contains('electronic signature') && !clause.toLowerCase().contains('signed electronically')) {
+                r.violations.add('Missing explicit electronic signature validity statement');
+            }
+            // Contract-type specific checks
+            if ('Employment' == contractType && !clause.toLowerCase().contains('termination')) {
+                r.violations.add('Employment contract missing termination clause');
+            }
+            // compute score: simple severity weighting
+            Integer vCount = r.violations.size();
+            Decimal score = Math.max(0, 100 - (vCount * 15));
+            r.complianceScore = score;
+            r.isCompliant = score >= 75;
+            // generate recommendations
+            if (!r.isCompliant) {
+                r.recommendations.add('Review the violations and add missing clauses.');
+                if (r.complianceScore < 50) r.recommendations.add('Send to legal review before publishing.');
+            }
+            return r;
+        } catch (Exception e) {
+            r.isCompliant = false;
+            r.complianceScore = 0;
+            r.violations.add('Exception during compliance check: ' + e.getMessage());
+            return r;
+        }
+    }                             
                                 
                                 //     try {
                                     //         List<String> violations = new List<String>();
@@ -329,65 +297,55 @@
                     
                     @AuraEnabled
                     public static Boolean validateClause(String clause, String region, String contractType) {
+                      
+                        ComplianceResult result = new ComplianceResult();
+                        List<String> violations = new List<String>();
+                        Boolean compliant = true;
+                    
+                        try {
+                                // Basic content validation
+                                if (String.isBlank(clause) || clause.length() < 50) {
+                                        violations.add('Document content is insufficient');
+                                        compliant = false;
+                                }
                         
-                        ComplianceValidationResult result = validateCompliance(clause, region, contractType);
-                        return result.isCompliant;
-                    }
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    //     ComplianceResult result = new ComplianceResult();
-                    //     List<String> violations = new List<String>();
-                    //     Boolean compliant = true;
-                    
-                    //     try {
-                        //         // Basic content validation
-                        //         if (String.isBlank(clause) || clause.length() < 50) {
-                            //             violations.add('Document content is insufficient');
-                            //             compliant = false;
-                        //         }
+                                // Region-specific compliance checks
+                                compliant = validateRegionCompliance(clause, region, violations) && compliant;
                         
-                        //         // Region-specific compliance checks
-                        //         compliant = validateRegionCompliance(clause, region, violations) && compliant;
+                                // Contract type-specific checks
+                                compliant = validateContractTypeCompliance(clause, contractType, violations) && compliant;
                         
-                        //         // Contract type-specific checks
-                        //         compliant = validateContractTypeCompliance(clause, contractType, violations) && compliant;
+                                // Electronic signature compliance
+                                if (!clause.toLowerCase().contains('electronic signature') &&
+                                    !clause.toLowerCase().contains('e-signature')) {
+                                        violations.add('Document must reference electronic signature requirements');
+                                        compliant = false;
+                                }
                         
-                        //         // Electronic signature compliance
-                        //         if (!clause.toLowerCase().contains('electronic signature') &&
-                        //             !clause.toLowerCase().contains('e-signature')) {
-                            //             violations.add('Document must reference electronic signature requirements');
-                            //             compliant = false;
-                        //         }
+                                // Legal binding clause check
+                                if (!clause.toLowerCase().contains('legally binding') &&
+                                    !clause.toLowerCase().contains('legal equivalent')) {
+                                        violations.add('Document must state that electronic signatures are legally binding');
+                                        compliant = false;
+                                }
                         
-                        //         // Legal binding clause check
-                        //         if (!clause.toLowerCase().contains('legally binding') &&
-                        //             !clause.toLowerCase().contains('legal equivalent')) {
-                            //             violations.add('Document must state that electronic signatures are legally binding');
-                            //             compliant = false;
-                        //         }
+                                result.isCompliant = compliant;
+                                result.violations = violations;
+                                result.complianceScore = calculateComplianceScore(violations.size());
+                                result.recommendation = generateComplianceRecommendation(violations);
                         
-                        //         result.isCompliant = compliant;
-                        //         result.violations = violations;
-                        //         result.complianceScore = calculateComplianceScore(violations.size());
-                        //         result.recommendation = generateComplianceRecommendation(violations);
+                                // Log compliance check
+                                AuditTrailManager.logSystemActivity('COMPLIANCE_CHECK',
+                                    'Compliance validation completed. Status: ' + (compliant ? 'COMPLIANT' : 'NON-COMPLIANT'));
                         
-                        //         // Log compliance check
-                        //         AuditTrailManager.logSystemActivity('COMPLIANCE_CHECK',
-                        //             'Compliance validation completed. Status: ' + (compliant ? 'COMPLIANT' : 'NON-COMPLIANT'));
-                        
-                    //     } catch (Exception e) {
-                        //         result.isCompliant = false;
-                        //         result.violations = new List<String>{'Compliance validation failed: ' + e.getMessage()};
-                        //         result.complianceScore = 0;
-                    //     }
+                        } catch (Exception e) {
+                                result.isCompliant = false;
+                                result.violations = new List<String>{'Compliance validation failed: ' + e.getMessage()};
+                                result.complianceScore = 0;
+                        }
                     
-                    //     return result;
-                // }
+                        return result;
+                }
                 
                 
                 
@@ -682,6 +640,17 @@
         }
         
     }
+
+
+    public class ComplianceValidationResult {
+        @AuraEnabled public Boolean isCompliant;
+        @AuraEnabled public Decimal complianceScore;
+        @AuraEnabled public List<String> violations;
+        @AuraEnabled public List<String> recommendations;
+        public ComplianceValidationResult() { this.violations = new List<String>(); this.recommendations = new List<String>(); this.isCompliant = true; this.complianceScore = 100; }
+    }
+
+
     public class ComplianceException extends Exception {}
     public class ComplianceValidationResult {
         @AuraEnabled public Boolean isCompliant { get; set; }

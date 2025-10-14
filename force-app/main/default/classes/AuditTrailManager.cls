@@ -1,5 +1,14 @@
 public class AuditTrailManager {
 
+
+     public class AuditOptions {
+        public String recordId;
+        public String action;
+        public String status;
+        public String details;
+        public Map<String, Object> metadata;
+        public AuditOptions() { metadata = new Map<String,Object>(); }
+    }
         // Audit action constants
     public static final String ACTION_DOCUMENT_CREATED = 'DOCUMENT_CREATED';
     public static final String ACTION_DOCUMENT_UPDATED = 'DOCUMENT_UPDATED';
@@ -29,16 +38,20 @@ public class AuditTrailManager {
     public static final String STATUS_INFO = 'INFO';
 
 
-    public static void logDocumentActivity(String documentId, String activityType, String details) {
-        Document_Audit__c audit = new Document_Audit__c(
-            DocumentId__c = documentId,
-        ActivityType__c = activityType,
-        ActivityDetails__c = details,
-        UserId__c = UserInfo.getUserId(),
-        IPAddress__c = getClientIP(),
-        Timestamp__c = System.now()
+    public static void logDocumentActivity(Id documentId, String action, String details) {
+        try {
+            AuditTrail__c a = new AuditTrail__c(
+                RecordId__c = (documentId == null ? null : String.valueOf(documentId)),
+                Action__c = action,
+                Status__c = 'DOCUMENT',
+                Details__c = details,
+                Timestamp__c = System.now(),
+                UserId__c = UserInfo.getUserId()
             );
-        insert audit;
+            insert a;
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN, 'AuditTrailManager.logDocumentActivity failed: ' + e.getMessage());
+        }
     }
     public static void logDocumentActivity(String recordId, String action, String status, String details) {
         try {
@@ -186,6 +199,80 @@ public class BulkAuditRequest {
 }
 
 
+private static String getClientIPAddressSafe() {
+        try {
+            if (RestContext.request != null && RestContext.request.headers != null) {
+                String xf = RestContext.request.headers.get('X-Forwarded-For');
+                if (!String.isBlank(xf)) {
+                    // X-Forwarded-For can be comma-separated — take first
+                    return xf.split(',')[0].trim();
+                }
+                // Try request URI remote info if available (platform dependent)
+                // On some contexts, remote address is not available, so guard it.
+                if (RestContext.request != null && RestContext.request.requestURI != null) {
+                    // fallback not ideal but keep for trace
+                    return RestContext.request.requestURI;
+                }
+            }
+        } catch (Exception ex) {
+            // swallow and return placeholder
+        }
+        return 'UNKNOWN';
+    }
+
+
+    private static void publishCriticalEvent(AuditTrail__c audit, AuditOptions opts) {
+        try {
+            // Platform event must be defined: AuditTrailEvent__e with fields: RecordId__c, Action__c, Details__c, Severity__c
+            AuditTrailEvent__e ev = new AuditTrailEvent__e(
+                RecordId__c = audit.RecordId__c,
+                Action__c = audit.Action__c,
+                Details__c = audit.Details__c,
+                Severity__c = (opts.metadata != null && opts.metadata.containsKey('severity')) ? String.valueOf(opts.metadata.get('severity')) : 'CRITICAL'
+            );
+            EventBus.publish(ev);
+        } catch (Exception ex) {
+            // last resort: write to debug
+            System.debug('Failed to publish audit event: ' + ex.getMessage());
+        }
+    }
+public static void createAuditEntry(AuditOptions opts) {
+        // Best-effort: gather context, then insert audit record.
+        try {
+            AuditTrail__c audit = new AuditTrail__c();
+            audit.RecordId__c = opts.recordId;
+            audit.Action__c = opts.action;
+            audit.Status__c = opts.status;
+            audit.Details__c = opts.details;
+            audit.Timestamp__c = System.now();
+            audit.UserId__c = UserInfo.getUserId();
+
+            // Context: attempt to read HTTP headers if available
+            String ip = getClientIPAddressSafe();
+            String ua = getUserAgentSafe();
+            String sessionId = UserInfo.getSessionId();
+
+            audit.IP_Address__c = ip;
+            audit.User_Agent__c = ua;
+            audit.Session_Id__c = sessionId;
+
+            // Optional: include metadata JSON for richer context
+            if (opts.metadata != null && !opts.metadata.isEmpty()) {
+                audit.Metadata__c = JSON.serialize(opts.metadata);
+            }
+
+            insert audit;
+
+            // If event severity is critical, publish platform event for immediate watchers
+            if (opts.metadata != null && opts.metadata.containsKey('severity') && String.valueOf(opts.metadata.get('severity')).toUpperCase() == 'CRITICAL') {
+                publishCriticalEvent(audit, opts);
+            }
+        } catch (Exception e) {
+            // Fallback: queueable writer to avoid causing caller to fail due to logging problems
+            System.enqueueJob(new AuditTrailFallbackQueueable(opts, e.getMessage()));
+        }
+    }
+
 public static void createAuditEntry(String recordId, String action, String status, String details) {
     try {
       AuditTrail__c a = new AuditTrail__c(
@@ -302,19 +389,20 @@ public static void createAuditEntry(String recordId, String action, String statu
         return 'UNKNOWN';
     }
 
-        public static void logSystemActivity(String action, String details) {
+         public static void logSystemActivity(String eventType, String details) {
         try {
             AuditTrail__c a = new AuditTrail__c(
-                Action__c = action,
+                RecordId__c = null,
+                Action__c = eventType,
+                Status__c = 'INFO',
                 Details__c = details,
-                UserId__c = UserInfo.getUserId(),
-                IP_Address__c = getClientIP(),
-                User_Agent__c = getUserAgent(),
-                Timestamp__c = System.now()
+                Timestamp__c = System.now(),
+                UserId__c = UserInfo.getUserId()
             );
             insert a;
-        } catch(Exception e) {
-            System.debug('Audit logging failed: ' + e.getMessage());
+        } catch (Exception e) {
+            // Best-effort logging — do not throw to avoid impacting the calling flow
+            System.debug(LoggingLevel.WARN, 'AuditTrailManager.logSystemActivity failed: ' + e.getMessage());
         }
     }
     
@@ -532,6 +620,10 @@ private static String getClientIPAddress() {
   }
   return 'UNKNOWN';
 }
+public static String getCountryFromIP(String ip) {
+        // TODO: replace with callout to named credential geo service
+        return null;
+    }
 private static Map<String,String> geoForIp(String ip) {
     Map<String,String> out = new Map<String,String>{ 'city'=>null, 'country'=>null };
     // TODO: call IP geolocation (callout:GeoService/locate)

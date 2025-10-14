@@ -1,5 +1,8 @@
 public class DocuSignIntegrationService {
-    
+    // Timeout settings
+      private static final Integer PDF_TIMEOUT_MS = 60000;
+    private static final Integer DOCUSIGN_TIMEOUT_MS = 60000;
+     
     // DocuSign API endpoints
     private static final String DOCUSIGN_BASE_URL = 'callout:DocuSign_Production_API';
     private static final String ENVELOPE_ENDPOINT = '/restapi/v2.1/accounts/{accountId}/envelopes';
@@ -46,6 +49,17 @@ public class DocuSignIntegrationService {
         }
     }
     
+ @AuraEnabled
+    public static String queueDocumentForSigning(String signerEmail, String signerName, String htmlContent, String subject, String docName) {
+        if (String.isBlank(signerEmail) || String.isBlank(htmlContent)) {
+            throw new AuraHandledException('Missing email or document content');
+        }
+        String base64Pdf = convertToBase64PDF(htmlContent);
+        System.enqueueJob(new SendEnvelopeJob(signerEmail, signerName, base64Pdf, subject, docName));
+        return 'QUEUED';
+    }
+
+
     /**
      * Create and send DocuSign envelope
      */
@@ -217,25 +231,59 @@ public class DocuSignIntegrationService {
     // Convert HTML/text content to PDF base64 using Visualforce renderAs (server side).
 // This implementation assumes you can create a VF page Visualforce/Template that accepts content.
 // DocuSignIntegrationService - helper
-private static String convertToBase64PDF(String documentContent) {
-    // NOTE: Apex cannot reliably render HTML->PDF; this example calls a secure external PDF rendering service
-    // Configure a Named Credential "PDF_Service" with the endpoint and auth
-    HttpRequest req = new HttpRequest();
-    req.setEndpoint('callout:PDF_Service/generate'); // Named Credential
-    req.setMethod('POST');
-    req.setHeader('Content-Type','application/json;charset=UTF-8');
-    req.setBody(JSON.serialize(new Map<String,Object>{ 'html' => documentContent }));
-    Http http = new Http();
-    HttpResponse res = http.send(req);
-    if (res.getStatusCode() == 200) {
-        // assume the service returns the PDF as base64 in body; adapt as needed
-        Map<String,Object> resp = (Map<String,Object>) JSON.deserializeUntyped(res.getBody());
-        String base64 = (String) resp.get('base64Pdf');
-        if (String.isNotBlank(base64)) return base64;
-        throw new CalloutException('PDF service returned no PDF payload');
+public static String convertToBase64PDF(String htmlContent) {
+        if (String.isBlank(htmlContent)) {
+            throw new AuraHandledException('Document content required');
+        }
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint('callout:PDF_Service/convert'); // configure this Named Credential
+        req.setMethod('POST');
+        req.setHeader('Content-Type','application/json');
+        req.setBody(JSON.serialize(new Map<String,Object>{ 'html' => htmlContent }));
+        req.setTimeout(PDF_TIMEOUT_MS);
+        Http http = new Http();
+        HttpResponse res = http.send(req);
+        if (res.getStatusCode() == 200) {
+            Map<String,Object> b = (Map<String,Object>) JSON.deserializeUntyped(res.getBody());
+            if (b.containsKey('base64Pdf')) return (String) b.get('base64Pdf');
+            throw new CalloutException('PDF service returned no base64Pdf');
+        }
+        throw new CalloutException('PDF service error: ' + res.getStatusCode() + ' - ' + res.getBody());
     }
-    throw new CalloutException('PDF service failed: ' + res.getStatus() + ' ' + res.getBody());
-}
+
+
+    // Create an envelope (example). Use Named Credential "DocuSign_NC" with base URL/auth configured
+    public static String createEnvelope(String accountId, String base64Pdf, String signerEmail, String signerName) {
+        String endpoint = URL.getSalesforceBaseUrl().toExternalForm(); // not used if Named Credential
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint('callout:DocuSign_NC/v2.1/accounts/' + accountId + '/envelopes');
+        req.setMethod('POST');
+        req.setHeader('Content-Type','application/json');
+        Map<String,Object> payload = new Map<String,Object>{
+            'emailSubject' => 'Please sign',
+            'documents' => new List<Object>{ new Map<String,Object>{
+                'documentBase64' => base64Pdf,
+                'name' => 'Document.pdf',
+                'fileExtension' => 'pdf',
+                'documentId' => '1'
+            }},
+            'recipients' => new Map<String,Object>{ 'signers' => new List<Object>{ new Map<String,Object>{
+                'email' => signerEmail,
+                'name' => signerName,
+                'recipientId' => '1',
+                'routingOrder' => '1'
+            }}},
+            'status' => 'sent'
+        };
+        req.setBody(JSON.serialize(payload));
+        Http http = new Http();
+        HttpResponse res = http.send(req);
+        if (res.getStatusCode() == 200 || res.getStatusCode() == 201) {
+            Map<String,Object> r = (Map<String,Object>) JSON.deserializeUntyped(res.getBody());
+            return (String) r.get('envelopeId');
+        }
+        throw new CalloutException('DocuSign envelope create failed: ' + res.getStatus() + ' ' + res.getBody());
+    }
 
 
     

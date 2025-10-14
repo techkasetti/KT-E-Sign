@@ -1,5 +1,5 @@
 public class PerformanceMetricsService {
-    
+        
     @AuraEnabled(cacheable=true)
     public static PerformanceDashboard getPerformanceMetrics() {
         PerformanceDashboard dashboard = new PerformanceDashboard();

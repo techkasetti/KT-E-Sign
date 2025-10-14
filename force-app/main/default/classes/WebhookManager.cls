@@ -1,10 +1,62 @@
 public class WebhookManager {
-    @future(callout=true)
-    public static void sendWebhook(String webhookUrl, String payload, String eventType) {
-        // Webhook delivery implementation
-        // Retry logic for failed deliveries
-        // Webhook security (HMAC signatures)
-        // Event logging and monitoring
+
+
+     private static final Integer WEBHOOK_TIMEOUT_MS = 30000;
+
+
+
+     public class WebhookResult {
+    public Boolean success;
+    public String message;
+    public List<WebhookDelivery> deliveries;
+
+    public WebhookResult(Boolean success, String message, List<WebhookDelivery> deliveries) {
+        this.success = success;
+        this.message = message;
+        this.deliveries = deliveries;
+    }
+
+    public class WebhookDelivery {
+        public Id subscriptionId;
+        public String eventType;
+        public Id recordId;
+        public DateTime timestamp;
+        public Integer statusCode;
+        public String responseBody;
+        public Boolean success;
+        public String errorMessage;
+
+        public WebhookDelivery() {
+        }
+    }
+}
+ public static Boolean verifySignature(String payload, String signatureHeader, String secret) {
+        try {
+            Blob key = Blob.valueOf(secret);
+            Blob msg = Blob.valueOf(payload);
+            Blob mac = Crypto.generateMac('HmacSHA256', msg, key);
+            String expected = 'sha256=' + EncodingUtil.convertToHex(mac);
+            return expected == signatureHeader;
+        } catch (Exception e) {
+            System.debug('verifySignature error: ' + e.getMessage());
+            return false;
+        }
+    }
+     public static WebhookResult sendWebhook(String subscriptionId, String eventType, Id recordId, String payload, String secret, Integer timeoutMs) {
+        WebhookDelivery d = new WebhookDelivery();
+        d.subscriptionId = subscriptionId;
+        d.eventType = eventType;
+        d.recordId = recordId;
+        d.timestamp = System.now();
+        d.success = false;
+        try {
+            System.enqueueJob(new WebhookDeliveryJob(subscriptionId,eventType,recordId,payload,secret,0,timeoutMs));
+            d.success = true;
+            return new WebhookResult(true,'Enqueued', new List<WebhookDelivery>{d});
+        } catch (Exception ex) {
+            logWebhookDelivery(d, ex.getMessage(), 0);
+            return new WebhookResult(false, 'Enqueue failed: ' + ex.getMessage(), new List<WebhookDelivery>{d});
+        }
     }
 
         @AuraEnabled
@@ -105,10 +157,9 @@ public class WebhookManager {
         Blob signature = Crypto.generateMac('HmacSHA256', payloadBlob, keyBlob);
         return 'sha256=' + EncodingUtil.base64Encode(signature);
     }
-    private static void scheduleWebhookRetry(String subscriptionId, String payload, Integer attemptNumber) {
-  Integer nextMinutes = Math.min(60, attemptNumber * 5);
-  Webhook_Retry__c r = new Webhook_Retry__c(Subscription__c=subscriptionId, Payload__c = payload, Attempt__c = attemptNumber, Scheduled_Time__c = System.now().addMinutes(nextMinutes));
-  insert r;
+    private static void scheduleWebhookRetry(String endpoint, String payload, Integer attempt) {
+    Webhook_Retry__c r = new Webhook_Retry__c(Endpoint__c=endpoint, Payload__c=payload, Attempt__c=attempt, Next_Attempt__c=System.now().addMinutes(attempt*5));
+    insert r;
 }
 
     private static void scheduleWebhookRetry(
@@ -129,24 +180,12 @@ public class WebhookManager {
         }
     }
     
-    private static void logWebhookDelivery(WebhookDelivery delivery) {
-        try {
-            Webhook_Log__c log = new Webhook_Log__c(
-                Subscription_Id__c = delivery.subscriptionId,
-                Event_Type__c = delivery.eventType,
-                Record_Id__c = delivery.recordId,
-                Status_Code__c = delivery.statusCode,
-                Success__c = delivery.success,
-                Error_Message__c = delivery.errorMessage,
-                Response_Body__c = delivery.responseBody,
-                Delivery_Timestamp__c = delivery.timestamp
-            );
-            insert log;
-        } catch (Exception e) {
-            System.debug('Failed to log webhook delivery: ' + e.getMessage());
-        }
-    }
-    
+   private static void logWebhookDelivery(String endpoint, Integer status, String body) {
+    try {
+        Webhook_Log__c l = new Webhook_Log__c(Endpoint__c=endpoint, StatusCode__c = status, ResponseBody__c = body, Timestamp__c = System.now());
+        insert l;
+    } catch (Exception e) { System.debug('Failed to log webhook delivery: ' + e.getMessage()); }
+}
     public class WebhookDelivery {
         public Id subscriptionId;
         public String eventType;
@@ -190,6 +229,26 @@ private static void logWebhookError(String subscriptionId, String statusCode, St
     Webhook_Log__c log = new Webhook_Log__c(Subscription__c = subscriptionId, Success__c = false, Error_Message__c = statusCode + ' : ' + body, Logged_At__c = System.now());
     insert log;
   } catch (Exception e) { System.debug('Failed to log webhook error: ' + e.getMessage()); }
+}
+
+
+@future(callout=true)
+public static void sendWebhookAsync(String endpoint, String payload, String secret) {
+    HttpRequest req = new HttpRequest();
+    req.setEndpoint(endpoint);
+    req.setMethod('POST');
+    req.setHeader('Content-Type','application/json');
+    req.setHeader('X-Signature', generateWebhookSignature(payload, secret));
+    req.setBody(payload);
+    Http http = new Http();
+    try {
+        HttpResponse res = http.send(req);
+        logWebhookDelivery(endpoint, res.getStatusCode(), res.getBody());
+        if (res.getStatusCode() >= 500) scheduleWebhookRetry(endpoint,payload,1);
+    } catch (Exception e) {
+        logWebhookDelivery(endpoint, 0, 'Exception: ' + e.getMessage());
+        scheduleWebhookRetry(endpoint,payload,1);
+    }
 }
 
 @future(callout=true)

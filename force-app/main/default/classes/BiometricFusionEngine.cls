@@ -30,21 +30,24 @@ public class BiometricFusionEngine {
     }
     
     private static Decimal calculateWeightedFusion(Map<String, Decimal> scores) {
-        // Weighted fusion with adaptive weights based on score reliability
-        Map<String, Decimal> weights = new Map<String, Decimal>{
-            'faceRecognition' => 0.35,
-            'voiceRecognition' => 0.25,
-            'fingerprint' => 0.25,
-            'signaturePattern' => 0.15
-        };
-        
-        Decimal fusedScore = 0;
-        for (String modality : scores.keySet()) {
-            if (weights.containsKey(modality)) {
-                fusedScore += scores.get(modality) * weights.get(modality);
-            }
-        }
-        
-        return fusedScore;
+    // Try to read from Custom Metadata (Biometric_Weights__mdt), fallback to defaults
+    Map<String, Decimal> weights = new Map<String, Decimal>{
+        'faceRecognition' => 0.35,
+        'voiceRecognition' => 0.25,
+        'fingerprint' => 0.25,
+        'signaturePattern' => 0.15
+    };
+    try {
+        // Example read; implement your metadata type name
+        // Biometric_Weight__mdt[] cfg = [SELECT Face__c, Voice__c, Fingerprint__c, Signature__c FROM Biometric_Weight__mdt LIMIT 1];
+        // if (!cfg.isEmpty()) { weights.put('faceRecognition', cfg[0].Face__c); ... }
+    } catch (Exception e) {
+        System.debug('No custom metadata for biometric weights, using defaults');
     }
+    Decimal fused = 0;
+    for (String k : weights.keySet()) {
+        if (scores.containsKey(k) && scores.get(k) != null) fused += scores.get(k) * weights.get(k);
+    }
+    return Math.min(100, fused * 100); // return 0-100 scale if input scores are 0-1
+}
 }

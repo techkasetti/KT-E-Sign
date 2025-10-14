@@ -4,17 +4,14 @@ public with sharing class SignatureRequestController {
     public enum SignatureStatus {
         DRAFT, PENDING, SIGNED, REJECTED, COMPLETED
     }
-    private static String generateDocumentHash(String documentId) {
-        DocumentLifecycleConfiguration__c doc = [
-            SELECT GeneratedClause__c, CreatedDate 
-            FROM DocumentLifecycleConfiguration__c 
-            WHERE Id = :documentId
-        ];
-        
-        String hashInput = doc.GeneratedClause__c + String.valueOf(doc.CreatedDate);
-        Blob hashBlob = Crypto.generateDigest('SHA-256', Blob.valueOf(hashInput));
-        return EncodingUtil.convertToHex(hashBlob);
-    }
+    
+    
+private static String generateDocumentHash(Id documentId) {
+    DocumentLifecycleConfiguration__c doc = [SELECT Id, GeneratedClause__c, CreatedDate FROM DocumentLifecycleConfiguration__c WHERE Id = :documentId LIMIT 1];
+    String input = doc.GeneratedClause__c + String.valueOf(doc.CreatedDate.getTime());
+    Blob digest = Crypto.generateDigest('SHA-256', Blob.valueOf(input));
+    return EncodingUtil.base64Encode(digest);
+}
 
     @AuraEnabled
     public static String initiateSignatureRequest(String documentId, String signerEmail, String signerName) {
