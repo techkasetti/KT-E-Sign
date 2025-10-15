@@ -389,23 +389,27 @@ public static void createAuditEntry(String recordId, String action, String statu
         return 'UNKNOWN';
     }
 
-         public static void logSystemActivity(String eventType, String details) {
+       public static void logSystemActivity(String actionType, String details) {
         try {
-            AuditTrail__c a = new AuditTrail__c(
-                RecordId__c = null,
-                Action__c = eventType,
-                Status__c = 'INFO',
-                Details__c = details,
-                Timestamp__c = System.now(),
-                UserId__c = UserInfo.getUserId()
-            );
-            insert a;
+            AuditTrail__c audit = new AuditTrail__c();
+            audit.RecordId__c = null;
+            audit.Action__c = actionType;
+            audit.Status__c = 'INFO';
+            audit.Details__c = details;
+            audit.Timestamp__c = System.now();
+            audit.UserId__c = UserInfo.getUserId();
+            audit.CorrelationId__c = getCorrelationId();
+            audit.ClientIPAddress__c = getClientIPAddress();
+            audit.UserAgent__c = getUserAgent();
+            audit.DeviceType__c = getDeviceType();
+            audit.Location_City__c = getLocationCity();
+            audit.Location_Country__c = getLocationCountry();
+            insert audit;
         } catch (Exception e) {
-            // Best-effort logging — do not throw to avoid impacting the calling flow
-            System.debug(LoggingLevel.WARN, 'AuditTrailManager.logSystemActivity failed: ' + e.getMessage());
+            // Do not bubble audit insertion failures to business logic
+            System.debug(LoggingLevel.ERROR,'AuditTrailManager.logSystemActivity failed: ' + e.getMessage());
         }
     }
-    
     public static void logError(String action, String errorMessage, String documentId) {
         try {
             AuditTrail__c audit = new AuditTrail__c(
@@ -629,15 +633,17 @@ private static Map<String,String> geoForIp(String ip) {
     // TODO: call IP geolocation (callout:GeoService/locate)
     return out;
   }
-private static String getUserAgent() {
-  try {
-    if (RestContext.request != null && RestContext.request.headers != null) {
-      String ua = RestContext.request.headers.get('User‑Agent');
-      return ua == null ? 'UNKNOWN' : ua;
+ public static String getUserAgent() {
+        try {
+            if (RestContext.request != null && RestContext.request.headers != null) {
+                String ua = RestContext.request.headers.get('User-Agent');
+                if (!String.isBlank(ua)) return ua;
+            }
+        } catch (Exception e) {
+            System.debug('getUserAgent error: ' + e.getMessage());
+        }
+        return 'UNKNOWN';
     }
-  } catch (Exception e) { }
-  return 'UNKNOWN';
-}
 
 private static String getLocationCountry(String ipAddress) {
   // Integrate with IP geolocation service (callout)
@@ -651,26 +657,63 @@ private static String getLocationCountry(String ipAddress) {
         }
         return 'UNKNOWN';
     }
-private static String getDeviceType() {
-    // TODO: DEVELOPER IMPLEMENTATION REQUIRED
-    // Determine device type from user agent or other indicators
-    return 'UNKNOWN'; // Replace with actual device detection logic
-}
-private static String getLocationCity() {
-    // TODO: DEVELOPER IMPLEMENTATION REQUIRED
-    // Implement geolocation service integration
-    return null; // Replace with actual geolocation service
-}
-private static String getLocationCountry() {
-    // TODO: DEVELOPER IMPLEMENTATION REQUIRED
-    // Implement geolocation service integration
-    return null; // Replace with actual geolocation service
-}
+public static String getDeviceType() {
+        try {
+            String ua = getUserAgent();
+            if (ua == null) return 'UNKNOWN';
+            String lower = ua.toLowerCase();
+            if (lower.contains('mobile') || lower.contains('iphone') || lower.contains('android')) return 'MOBILE';
+            if (lower.contains('tablet') || lower.contains('ipad')) return 'TABLET';
+            return 'DESKTOP';
+        } catch (Exception e) {
+            System.debug('getDeviceType error: ' + e.getMessage());
+            return 'UNKNOWN';
+        }
+    }
+public static String getLocationCity() {
+        try {
+            String ip = getClientIPAddress();
+            if (ip == null || ip == 'UNKNOWN') return null;
+            HttpRequest req = new HttpRequest();
+            req.setEndpoint('callout:IPGeoService/geoip/' + EncodingUtil.urlEncode(ip,'UTF-8'));
+            req.setMethod('GET');
+            req.setHeader('Accept','application/json');
+            Http http = new Http();
+            HttpResponse res = http.send(req);
+            if (res.getStatusCode() >= 200 && res.getStatusCode() < 300) {
+                Map<String,Object> body = (Map<String,Object>) JSON.deserializeUntyped(res.getBody());
+                if (body.containsKey('city')) return (String) body.get('city');
+            }
+        } catch (Exception e) {
+            System.debug('getLocationCity error: ' + e.getMessage());
+        }
+        return null;
+    }
+ public static String getLocationCountry() {
+        try {
+            String ip = getClientIPAddress();
+            if (ip == null || ip == 'UNKNOWN') return null;
+            HttpRequest req = new HttpRequest();
+            req.setEndpoint('callout:IPGeoService/geoip/' + EncodingUtil.urlEncode(ip,'UTF-8'));
+            req.setMethod('GET');
+            req.setHeader('Accept','application/json');
+            Http http = new Http();
+            HttpResponse res = http.send(req);
+            if (res.getStatusCode() >= 200 && res.getStatusCode() < 300) {
+                Map<String,Object> body = (Map<String,Object>) JSON.deserializeUntyped(res.getBody());
+                if (body.containsKey('countryCode')) return (String) body.get('countryCode');
+                if (body.containsKey('country')) return (String) body.get('country');
+            }
+        } catch (Exception e) {
+            System.debug('getLocationCountry error: ' + e.getMessage());
+        }
+        return null;
+    }
 
-private static String getCorrelationId() {
-    // Generate unique correlation ID for request tracking
-    return 'CORR-' + System.now().getTime() + '-' + Math.round(Math.random() * 10000);
-}
+ public static String getCorrelationId() {
+        // Deterministic but unique-enough correlation id for logs
+        return 'corr-' + String.valueOf(DateTime.now().getTime()) + '-' + String.valueOf(Math.abs(Crypto.getRandomInteger()));
+    }
 
 private static String getCurrentRuleVersion() {
     // TODO: DEVELOPER IMPLEMENTATION REQUIRED

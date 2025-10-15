@@ -3,6 +3,10 @@ public class DocuSignIntegrationService {
       private static final Integer PDF_TIMEOUT_MS = 60000;
     private static final Integer DOCUSIGN_TIMEOUT_MS = 60000;
      
+
+    @TestVisible static String DOCUSIGN_ACCOUNT_ID = null; 
+       public class DocuSignException extends Exception {}
+    
     // DocuSign API endpoints
     private static final String DOCUSIGN_BASE_URL = 'callout:DocuSign_Production_API';
     private static final String ENVELOPE_ENDPOINT = '/restapi/v2.1/accounts/{accountId}/envelopes';
@@ -48,7 +52,108 @@ public class DocuSignIntegrationService {
             baseUrl = 'https://demo.docusign.net/restapi';
         }
     }
-    
+     public static Map<String,Object> buildDocuSignEnvelopePayload(String base64Pdf, String documentName, String signerEmail, String signerName) {
+        Map<String,Object> doc = new Map<String,Object>{
+            'documentBase64' => base64Pdf,
+            'name' => documentName,
+            'fileExtension' => 'pdf',
+            'documentId' => '1'
+        };
+
+        // Simple anchor tab example using an anchor string placed in the HTML '/sn1/'
+        Map<String,Object> signHere = new Map<String,Object>{
+            'anchorString' => '/sn1/',
+            'anchorUnits' => 'pixels',
+            'anchorYOffset' => '0',
+            'anchorXOffset' => '0'
+        };
+
+        Map<String,Object> signer = new Map<String,Object>{
+            'email' => signerEmail,
+            'name'  => signerName,
+            'recipientId' => '1',
+            'routingOrder' => '1',
+            'tabs' => new Map<String,Object>{ 'signHereTabs' => new List<Object>{ signHere } }
+        };
+
+        Map<String,Object> recipients = new Map<String,Object>{ 'signers' => new List<Object>{ signer } };
+
+        Map<String,Object> envelope = new Map<String,Object>{
+            'emailSubject' => 'Please sign the document',
+            'documents' => new List<Object>{ doc },
+            'recipients' => recipients,
+            'status' => 'sent' // "created" if you want to save draft (not sent)
+        };
+
+        return envelope;
+    }
+
+    public static String sendEnvelope(String signerEmail, String signerName, String documentTitle, String base64Pdf) {
+        if (String.isBlank(signerEmail) || String.isBlank(base64Pdf)) {
+            throw new DocuSignException('Missing required envelope parameters');
+        }
+
+        Map<String,Object> doc = new Map<String,Object>{
+            'documentBase64' => base64Pdf,
+            'name' => documentTitle,
+            'fileExtension' => 'pdf',
+            'documentId' => '1'
+        };
+        Map<String,Object> signer = new Map<String,Object>{
+            'email' => signerEmail,
+            'name' => signerName,
+            'recipientId' => '1',
+            'routingOrder' => '1'
+        };
+        Map<String,Object> recipients = new Map<String,Object>{ 'signers' => new List<Object>{ signer } };
+        Map<String,Object> bodyMap = new Map<String,Object>{
+            'documents' => new List<Object>{ doc },
+            'emailSubject' => 'Please sign: ' + documentTitle,
+            'recipients' => recipients,
+            'status' => 'sent'
+        };
+
+        String acct = DOCUSIGN_ACCOUNT_ID;
+        if (String.isBlank(acct)) acct = 'DEMO_ACCOUNT_ID'; // fallback for dev only
+
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint('callout:DocuSign_API/accounts/' + acct + '/envelopes');
+        req.setMethod('POST');
+        req.setHeader('Content-Type','application/json');
+        req.setBody(JSON.serialize(bodyMap));
+        req.setTimeout(120000);
+
+        Integer attempts = 0;
+        Integer maxAttempts = 3;
+        while (attempts < maxAttempts) {
+            attempts++;
+            try {
+                Http http = new Http();
+                HttpResponse res = http.send(req);
+                if (res.getStatusCode() == 201 || (res.getStatusCode() >= 200 && res.getStatusCode() < 300)) {
+                    try {
+                        Map<String,Object> parsed = (Map<String,Object>) JSON.deserializeUntyped(res.getBody());
+                        if (parsed.containsKey('envelopeId')) return (String) parsed.get('envelopeId');
+                    } catch(Exception je) {
+                        // Some providers return header location instead; fallthrough to generic success case
+                        // Return success without envelopeId is risky — surface an error:
+                        throw new DocuSignException('DocuSign success response missing envelopeId: ' + res.getBody());
+                    }
+                } else {
+                    if (res.getStatusCode() >= 500 && attempts < maxAttempts) {
+                        System.debug('DocuSign server error, retry ' + attempts + ' status ' + res.getStatusCode());
+                        // small wait not available in Apex, continue loop
+                        continue;
+                    }
+                    throw new DocuSignException('DocuSign error: ' + res.getStatus() + ' body:' + res.getBody());
+                }
+            } catch (CalloutException ce) {
+                if (attempts >= maxAttempts) throw new DocuSignException('DocuSign callout failed: ' + ce.getMessage());
+                System.debug('DocuSign callout exception (retrying): ' + ce.getMessage());
+            }
+        }
+        throw new DocuSignException('DocuSign envelope creation failed after retries');
+    }
  @AuraEnabled
     public static String queueDocumentForSigning(String signerEmail, String signerName, String htmlContent, String subject, String docName) {
         if (String.isBlank(signerEmail) || String.isBlank(htmlContent)) {
@@ -222,7 +327,22 @@ public class DocuSignIntegrationService {
         
         return envelope;
     }
-    
+    public static String convertHtmlToBase64Pdf(String htmlContent) {
+try {
+// PageReference to a Visualforce page that renders the HTML into PDF.
+PageReference pdfPage = Page.DocuSign_PDF_Template;
+if (pdfPage == null) {
+throw new AuraHandledException('Missing Visualforce page: DocuSign_PDF_Template');
+}
+pdfPage.getParameters().put('html', htmlContent);
+// getContentAsPDF must run synchronously and can throw callout/timeout exceptions.
+Blob pdfBlob = pdfPage.getContentAsPDF();
+return EncodingUtil.base64Encode(pdfBlob);
+} catch (Exception e) {
+// If VF rendering fails, fallback to an external PDF generation service (not implemented here).
+throw new AuraHandledException('PDF generation failed: ' + e.getMessage());
+}
+}
     /**
      * Convert document content to Base64 PDF
      * DEVELOPER TODO: Implement PDF conversion logic based on your document format

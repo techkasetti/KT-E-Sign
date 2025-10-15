@@ -1,44 +1,80 @@
 public class BiometricLivenessService {
-    @AuraEnabled(cacheable=false)
-    public static BiometricValidationResult performLivenessCheck(String sessionId, Blob imageData) {
+
+
+     public class LivenessResult {
+        @AuraEnabled public Id validationId;
+        @AuraEnabled public Boolean isLive;
+        @AuraEnabled public Decimal confidence;
+        @AuraEnabled public String status;
+        public LivenessResult(Id id, Boolean isLive, Decimal confidence, String status) {
+            this.validationId = id;
+            this.isLive = isLive;
+            this.confidence = confidence;
+            this.status = status;
+        }
+    }
+     @AuraEnabled(cacheable=false)
+    public static LivenessResult performLivenessCheck(String imageDataBase64, Id signatureRequestId) {
+        BiometricValidation__c validation = new BiometricValidation__c(
+            Signature_Request__c = signatureRequestId,
+            Validation_Type__c = 'LIVENESS',
+            Status__c = 'IN_PROGRESS',
+            Timestamp__c = System.now()
+        );
         try {
-            // Create validation record
-            BiometricValidation__c validation = new BiometricValidation__c(
-                Session_ID__c = sessionId,
-                Validation_Type__c = 'Liveness',
-                Status__c = 'In Progress',
-                Timestamp__c = System.now()
-            );
             insert validation;
-            
-            // Call external biometric service
+        } catch (Exception e) {
+            // If insert fails, still attempt to callout? Here we abort and return error result
+            System.debug('Failed to create BiometricValidation record: ' + e.getMessage());
+            return new LivenessResult(null, false, 0, 'ERROR: Could not create validation record');
+        }
+
+        try {
+            HttpRequest req = new HttpRequest();
+            req.setEndpoint('callout:BiometricAPI/liveness/analyze');
+            req.setMethod('POST');
+            req.setHeader('Content-Type','application/json');
+            req.setBody(JSON.serialize(new Map<String,Object>{ 'image' => imageDataBase64 }));
+            req.setTimeout(30000);
+
             Http http = new Http();
-            HttpRequest request = new HttpRequest();
-            request.setEndpoint('callout:BiometricAPI/liveness/analyze');
-            request.setMethod('POST');
-            request.setHeader('Content-Type', 'application/json');
-            request.setBodyAsBlob(imageData);
-            request.setTimeout(30000);
-            
-            HttpResponse response = http.send(request);
-            
-            if (response.getStatusCode() == 200) {
-                Map<String, Object> result = (Map<String, Object>) JSON.deserializeUntyped(response.getBody());
-                Decimal livenessScore = (Decimal) result.get('livenessScore');
-                Boolean isLive = livenessScore >= 85; // 85% confidence threshold
-                
-                // Update validation record
+            HttpResponse res = http.send(req);
+
+            if (res.getStatusCode() >= 200 && res.getStatusCode() < 300) {
+                Map<String,Object> parsed = (Map<String,Object>) JSON.deserializeUntyped(res.getBody());
+                Decimal livenessScore = 0;
+                if (parsed.containsKey('livenessScore')) {
+                    Object v = parsed.get('livenessScore');
+                    if (v instanceof Decimal) livenessScore = (Decimal) v;
+                    else if (v instanceof Double) livenessScore = Decimal.valueOf(String.valueOf((Double)v));
+                    else if (v instanceof Integer) livenessScore = Decimal.valueOf((Integer)v);
+                    else {
+                        try { livenessScore = Decimal.valueOf(String.valueOf(v)); } catch(Exception ex){ livenessScore = 0; }
+                    }
+                }
+                Boolean isLive = livenessScore >= 0.85;
                 validation.Liveness_Score__c = livenessScore;
                 validation.Is_Live__c = isLive;
-                validation.Status__c = isLive ? 'Passed' : 'Failed';
-                validation.Analysis_Details__c = JSON.serialize(result);
+                validation.Status__c = isLive ? 'PASSED' : 'FAILED';
+                validation.Analysis_Details__c = res.getBody();
                 update validation;
-                
-                return new BiometricValidationResult(validation.Id, isLive, livenessScore);
+                return new LivenessResult(validation.Id, isLive, livenessScore, validation.Status__c);
+            } else {
+                validation.Status__c = 'ERROR';
+                validation.Analysis_Details__c = 'HTTP ' + res.getStatusCode() + ' - ' + res.getBody();
+                update validation;
+                return new LivenessResult(validation.Id, false, 0, 'ERROR');
             }
-        } catch (Exception e) {
-            System.debug('Liveness detection error: ' + e.getMessage());
+        } catch (Exception ex) {
+            System.debug('Liveness detection exception: ' + ex.getMessage());
+            try {
+                validation.Status__c = 'ERROR';
+                validation.Analysis_Details__c = 'Exception: ' + ex.getMessage();
+                update validation;
+            } catch (Exception nested) {
+                System.debug('Failed to update validation record after exception: ' + nested.getMessage());
+            }
+            return new LivenessResult(validation.Id, false, 0, 'ERROR');
         }
-        return new BiometricValidationResult(null, false, 0);
-    }
+    }   
 }

@@ -63,7 +63,30 @@ return result;
     return fallbackResult;
 }
 }
-
+public static AIFraudAnalysisResult analyzeSignatureForFraud(Map<String,Object> payload) {
+        AIFraudAnalysisResult result = new AIFraudAnalysisResult();
+        try {
+            FraudScoringResult ml = MLIntegrationService.calculateFraudScore(payload);
+            if (ml != null && ml.success) {
+                result.analysisMethod = 'AI_POWERED';
+                result.fraudProbability = ml.fraudScore;
+                result.riskScore = ml.fraudScore; // normalized
+                result.riskLevel = (ml.fraudScore >= 0.8 ? 'CRITICAL' : ml.fraudScore >= 0.6 ? 'HIGH' : 'MEDIUM');
+                result.riskIndicators = ml.riskIndicators;
+            } else {
+                result = performRuleBasedFraudAnalysisFallback(payload);
+            }
+            // store result robustly
+            try {
+                storeFraudAnalysisResults(result);
+            } catch (Exception e) {
+                System.debug('Failed to persist fraud analysis: ' + e.getMessage());
+            }
+        } catch (Exception e) {
+            result = performRuleBasedFraudAnalysisFallback(payload);
+        }
+        return result;
+    }   
 private static AIFraudAnalysisResult performRuleBasedFraudAnalysis(
     FraudAnalysisPayload payload, 
     AIFraudAnalysisResult result

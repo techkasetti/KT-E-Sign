@@ -42,7 +42,12 @@ public class DocuSignIntegration {
             throw new DocuSignException('Failed to create DocuSign envelope: ' + res.getBody());
         }
     }
-    
+     @TestVisible
+    public static String getAccountId() {
+        // Prefer a Custom Metadata or Custom Setting in prod; exposed for tests.
+        String acct = DocuSign_Config__mdt.getOrgDefaults() != null ? DocuSign_Config__mdt.getOrgDefaults().AccountId__c : null;
+        return acct == null ? 'DEMO_ACCOUNT_ID' : acct;
+    }
     private static String getDocuSignAccessToken() {
         // Implementation to get OAuth token from DocuSign
         // This would typically involve stored credentials and OAuth flow

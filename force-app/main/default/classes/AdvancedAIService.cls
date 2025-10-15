@@ -1,5 +1,14 @@
 public class AdvancedAIService {
     
+public class AIResult {
+public String generatedText;
+public Decimal confidence;
+public List<String> alternatives;
+public List<String> complianceNotes;
+public String rawResponse;
+}
+
+    
     // =====================================
     // AI Configuration Constants
     // =====================================
@@ -144,72 +153,136 @@ public class AdvancedAIService {
         
         return similarClauses;
     }
-    
+    @TestVisible private static Decimal toDecimal(Object o) {
+        if (o==null) return null;
+        if (o instanceof Decimal) return (Decimal)o;
+        try { return Decimal.valueOf(String.valueOf(o)); } catch(Exception e) { return null; }
+    }
+
+    @TestVisible
+private static String extractBlock(String text, String s, String e) {
+    if (String.isBlank(text)) return null;
+
+    Integer si = text.indexOf(s);
+    if (si < 0) return null;
+
+    si += s.length();
+    Integer ei = text.indexOf(e, si);
+    if (ei < 0) return text.substring(si).trim();
+
+    return text.substring(si, ei).trim();
+}
+
+@TestVisible
+private static List<String> extractListBlock(String text, String startMarker, String endMarker) {
+    List<String> out = new List<String>();
+    String block = extractBlock(text, startMarker, endMarker);
+
+    if (String.isBlank(block)) return out;
+
+    for (String ln : block.split('\\n')) {
+        String t = ln.trim();
+        if (t.startsWith('-') || t.startsWith('*') || t.startsWith('•')) {
+            t = t.replaceFirst('^[-*•]\\s*', '');
+        }
+        if (!String.isBlank(t)) out.add(t);
+    }
+
+    return out;
+}
+
+@TestVisible
+private static Decimal heuristicConfidence(AIResult r) {
+    Decimal score = 50;
+
+    if (!String.isBlank(r.generatedText)) score += 20;
+    if (r.alternatives != null && r.alternatives.size() >= 2) score += 10;
+    if (r.complianceNotes != null && r.complianceNotes.size() > 0) score += 10;
+
+    return Math.min(100, score);
+}
+
     
     // =====================================
     // AI Callout
     // =====================================
     
-    private static AIGeneratedClause callAdvancedAI(
-        String prompt, 
-        List<String> similarClauses, 
-        AdvancedClauseRequest request
-    ) {
-        AIGeneratedClause result = new AIGeneratedClause();
-        
+    public static AIResult callAdvancedAI(String systemPrompt, String userPrompt, String model, Integer timeoutMs) {
         HttpRequest req = new HttpRequest();
-        req.setEndpoint(AI_ENDPOINT + '/v1/chat/completions');
+        req.setEndpoint('callout:AI_Service/v1/chat/completions');
         req.setMethod('POST');
-        req.setHeader('Content-Type', 'application/json');
-        req.setTimeout(30000);
-        
-        Map<String, Object> payload = new Map<String, Object>{
-            'model' => 'gpt-4-turbo',
-            'messages' => new List<Map<String, Object>>{
-                new Map<String, Object>{
-                    'role' => 'system',
-                    'content' => buildSystemPrompt(request)
-                },
-                new Map<String, Object>{
-                    'role' => 'user',
-                    'content' => prompt
-                }
-            },
-            'temperature' => 0.3,
-            'max_tokens' => 2000,
-            'top_p' => 0.9,
-            'frequency_penalty' => 0.1,
-            'presence_penalty' => 0.1
+        req.setHeader('Content-Type','application/json');
+        Map<String,Object> body = new Map<String,Object>{
+            'model' => model,
+            'messages' => new List<Object>{ new Map<String,Object>{'role'=>'system','content'=>systemPrompt}, new Map<String,Object>{'role'=>'user','content'=>userPrompt} },
+            'temperature' => 0.2
         };
-        
-        req.setBody(JSON.serialize(payload));
-        
+        req.setBody(JSON.serialize(body));
+        req.setTimeout(timeoutMs==null?120000:timeoutMs);
+
         Http http = new Http();
         HttpResponse res = http.send(req);
-        
-        if (res.getStatusCode() == 200) {
-            Map<String, Object> responseData = 
-                (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
-            
-            List<Object> choices = (List<Object>) responseData.get('choices');
-            
-            if (!choices.isEmpty()) {
-                Map<String, Object> choice = (Map<String, Object>) choices[0];
-                Map<String, Object> message = (Map<String, Object>) choice.get('message');
-                
-                result = parseAIResponse((String) message.get('content'));
-                result.confidenceScore = calculateConfidenceScore(result);
+
+        AIResult result = new AIResult();
+        result.alternatives = new List<String>();
+        result.complianceNotes = new List<String>();
+        result.rawResponse = res.getBody();
+
+        if (res.getStatusCode() >= 200 && res.getStatusCode() < 300) {
+            try {
+                Map<String,Object> parsed = (Map<String,Object>)JSON.deserializeUntyped(res.getBody());
+                // robust navigation: choices->[0]->message->content
+                if (parsed.containsKey('choices')) {
+                    List<Object> choices = (List<Object>) parsed.get('choices');
+                    if (!choices.isEmpty()) {
+                        Map<String,Object> first = (Map<String,Object>) choices[0];
+                        if (first.containsKey('message')) {
+                            Map<String,Object> message = (Map<String,Object>) first.get('message');
+                            if (message.containsKey('content')) result.generatedText = (String) message.get('content');
+                        } else if (first.containsKey('text')) { result.generatedText = (String) first.get('text'); }
+                    }
+                }
+                if (parsed.containsKey('confidence')) result.confidence = toDecimal(parsed.get('confidence'));
+                if (parsed.containsKey('alternatives')) result.alternatives = (List<String>)parsed.get('alternatives');
+                if (parsed.containsKey('complianceNotes')) result.complianceNotes = (List<String>) parsed.get('complianceNotes');
+            } catch (Exception e) {
+                // fallback: try extracting structured blocks from the raw text
+                result.generatedText = extractBlock(result.rawResponse,'<generatedText>','</generatedText>');
+                result.alternatives = extractListBlock(result.rawResponse,'<alternatives>','</alternatives>');
+                result.complianceNotes = extractListBlock(result.rawResponse,'<complianceNotes>','</complianceNotes>');
             }
-        } else {
-            throw new CalloutException(
-                'AI Service Error: ' + res.getStatus() + ' - ' + res.getBody()
-            );
+            if (result.confidence == null) result.confidence = heuristicConfidence(result);
+            return result;
         }
-        
-        return result;
+        throw new CalloutException('AI call failed: HTTP ' + res.getStatus() + ' body:' + res.getBody());
     }
-    
-    
+     @TestVisible private static String extractBlock(String text, String startMarker, String endMarker) {
+        if (String.isBlank(text)) return null;
+        Integer s = text.indexOf(startMarker);
+        if (s < 0) return null;
+        s += startMarker.length();
+        Integer e = text.indexOf(endMarker, s);
+        if (e < 0) return text.substring(s).trim();
+        return text.substring(s, e).trim();
+    }
+    @TestVisible private static List<String> extractListBlock(String text, String startMarker, String endMarker) {
+        List<String> out = new List<String>();
+        String block = extractBlock(text, startMarker, endMarker);
+        if (String.isBlank(block)) return out;
+        for (String line : block.split('\\n')) {
+            String t = line.trim();
+            if (t.startsWith('-') || t.startsWith('*') || t.startsWith('•')) t = t.replaceFirst('^[-*•]\\s*','');
+            if (!String.isBlank(t)) out.add(t);
+        }
+        return out;
+    }
+        @TestVisible private static Decimal heuristicConfidence(AIResult r) {
+        Decimal score = 50;
+        if (!String.isBlank(r.generatedText)) score += 20;
+        if (r.alternatives != null && r.alternatives.size() >= 2) score += 10;
+        if (r.complianceNotes != null && r.complianceNotes.size() > 0) score += 10;
+        return Math.min(100, score);
+    }
     // =====================================
     // System Prompt Builder
     // =====================================

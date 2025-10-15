@@ -117,11 +117,21 @@ public class CRMSyncService {
         return batchResult;
     }
 // CRMSyncService: minimal helper and future wrapper (gaps flagged) @476 @477 @478
-private static String getPersonIdByEmail(String email, String crmSystem) {
-    // Simplest approach: query local mapping table first; if not found, call CRM API (not implemented)
-    // For now return null to indicate not found so caller can create a contact
-    return null;
-}
+ public static String getPersonIdByEmail(String email, String crmSystem) {
+        if (String.isBlank(email)) return null;
+        if (crmSystem == 'pipedrive') {
+            // TODO: implement Pipedrive callout using Named Credential Pipedrive_API
+            // Example: callout to /persons/search?term=encodedEmail
+            return null; // return external person id string or null
+        } else if (crmSystem == 'hubspot') {
+            // TODO: hubspot contact search call
+            return null;
+        } else if (crmSystem == 'salesforce') {
+            // Intra-org: find Contact.Id by Email
+            Contact c = [SELECT Id FROM Contact WHERE Email = :email LIMIT 1];
+            return c==null? null : String.valueOf(c.Id);
+        }
+    }
 
 @future(callout=true)
 public static void syncWithCRM(String recordId, String crmSystem) {

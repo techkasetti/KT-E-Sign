@@ -7,7 +7,25 @@ public class AdvancedAnalyticsBatch implements Database.Batchable<sObject>, Data
         this.batchType = batchType;
         this.analysisDate = (analysisDate != null) ? analysisDate : System.today().addDays(-1);
     }
-
+public static void safeInsertRecords(List<SObject> records) {
+        if (records==null || records.isEmpty()) return;
+        Database.SaveResult[] results = Database.insert(records, false);
+        for (Integer i=0;i<results.size();i++) {
+            if (!results[i].isSuccess()) {
+                String allErr = '';
+                for (Database.Error err : results[i].getErrors()) allErr += err.getMessage() + '; ';
+                try {
+                    Batch_Error_Log__c log = new Batch_Error_Log__c(
+                        Record_Type__c = String.valueOf(records[i].getSObjectType()),
+                        Error_Message__c = allErr
+                    );
+                    insert log;
+                } catch (Exception e) {
+                    System.debug('Failed to log batch error: ' + e.getMessage());
+                }
+            }
+        }
+    }
     public Database.QueryLocator start(Database.BatchableContext bc) {
         switch on batchType {
             when 'DOCUMENT_INTELLIGENCE' {

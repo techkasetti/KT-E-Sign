@@ -24,26 +24,48 @@ global class ESignatureAPIController {
         }
     }
     
-    @HttpPost
-    global static SignatureRequestResponse createSignatureRequest(SignatureRequestData requestData) {
-        // Validate API access
-        if (!APISecurityManager.validateAPIAccess()) {
-            RestContext.response.statusCode = 401;
-            return new SignatureRequestResponse('Unauthorized', null);
-        }
-        
+   @HttpPost
+    global static APIResponse createSignatureRequest() {
         try {
-            Signature_Request__c newRequest = new Signature_Request__c();
-            newRequest.SignerEmail__c = requestData.signerEmail;
-            newRequest.DocumentId__c = requestData.documentId;
-            newRequest.Status__c = 'Pending';
-            
-            insert newRequest;
-            
-            return new SignatureRequestResponse('Created successfully', newRequest);
+            // Rate limit check
+            if (!APISecurityManager.checkRateLimit(UserInfo.getUserId())) {
+                return new APIResponse(429, 'Rate limit exceeded', null);
+            }
+            // Authorization check
+            if (!APISecurityManager.validateAPIAccess()) {
+                return new APIResponse(401, 'Access denied', null);
+            }
+
+            String body = RestContext.request.requestBody.toString();
+            if (String.isBlank(body)) {
+                return new APIResponse(400, 'Empty request body', null);
+            }
+
+            Map<String,Object> payload = (Map<String,Object>) JSON.deserializeUntyped(body);
+            String documentId = (String) payload.get('documentId');
+            String signerEmail = (String) payload.get('signerEmail');
+            String signerName = (String) payload.get('signerName');
+
+            if (String.isBlank(documentId) || String.isBlank(signerEmail)) {
+                return new APIResponse(400, 'Missing required fields: documentId or signerEmail', null);
+            }
+
+            Signature_Request__c req = new Signature_Request__c(
+                DocumentId__c = documentId,
+                SignerEmail__c = signerEmail,
+                SignerName__c = signerName,
+                Status__c = 'Pending'
+            );
+            insert req;
+
+            // Log
+            AuditTrailManager.logSystemActivity('API_SIGNATURE_CREATE', 'Created request ' + req.Id);
+
+            return new APIResponse(201, 'Created', new Map<String,Object>{ 'id' => req.Id });
+
         } catch (Exception e) {
-            RestContext.response.statusCode = 400;
-            return new SignatureRequestResponse('Error creating request: ' + e.getMessage(), null);
+            AuditTrailManager.logSystemActivity('API_SIGNATURE_CREATE_ERROR', e.getMessage());
+            return new APIResponse(500, 'Server error: ' + e.getMessage(), null);
         }
     }
 }
