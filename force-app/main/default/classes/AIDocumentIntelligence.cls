@@ -1,4 +1,47 @@
 public class AIDocumentIntelligence {
+    // --- Supporting data classes for Predictive Insights ---
+    public class PredictiveInsights {
+        @AuraEnabled public List<Prediction> predictions { get; set; }
+        public PredictiveInsights(List<Prediction> predictions) {
+            this.predictions = predictions;
+        }
+    }
+
+    public class Prediction {
+        @AuraEnabled public String category { get; set; }
+        @AuraEnabled public Decimal value { get; set; }
+        @AuraEnabled public String details { get; set; }
+        @AuraEnabled public String recommendation { get; set; }
+        public Prediction(String category, Decimal value, String details, String recommendation) {
+            this.category = category;
+            this.value = value;
+            this.details = details;
+            this.recommendation = recommendation;
+        }
+    }
+
+    // --- Supporting data classes for Competitive Analysis ---
+    public class CompetitiveAnalysis {
+        @AuraEnabled public List<BenchmarkMetric> benchmarks { get; set; }
+        @AuraEnabled public Decimal competitiveScore { get; set; }
+        public CompetitiveAnalysis(List<BenchmarkMetric> benchmarks, Decimal competitiveScore) {
+            this.benchmarks = benchmarks;
+            this.competitiveScore = competitiveScore;
+        }
+    }
+
+    public class BenchmarkMetric {
+        @AuraEnabled public String name { get; set; }
+        @AuraEnabled public Decimal value { get; set; }
+        @AuraEnabled public String unit { get; set; }
+        @AuraEnabled public String type { get; set; }
+        public BenchmarkMetric(String name, Decimal value, String unit, String type) {
+            this.name = name;
+            this.value = value;
+            this.unit = unit;
+            this.type = type;
+        }
+    }
 
     // AI analysis confidence thresholds
     public static final Decimal HIGH_CONFIDENCE_THRESHOLD = 0.85;
@@ -119,37 +162,36 @@ public class AIDocumentIntelligence {
     }
 
     private static PredictiveInsights generatePredictiveInsights(DocumentLifecycleConfiguration__c doc) {
+
         List<Prediction> predictions = new List<Prediction>();
-      // Total count of documents for the contract type in last 365 days
-AggregateResult totalResult = [
-    SELECT COUNT(Id) totalCount, AVG(DaysToComplete__c) avgDays
-    FROM DocumentLifecycleConfiguration__c
-    WHERE ContractType__c = :doc.ContractType__c
-    AND CreatedDate = LAST_N_DAYS:365
-];
+        // Total count and average days for contract type in last 365 days
+        AggregateResult totalResult = [
+            SELECT COUNT(Id) totalCount, AVG(DaysToComplete__c) avgDays
+            FROM DocumentLifecycleConfiguration__c
+            WHERE ContractType__c = :doc.ContractType__c
+            AND CreatedDate = LAST_N_DAYS:365
+        ];
 
-// Count of completed documents for the contract type in last 365 days
-AggregateResult completedResult = [
-    SELECT COUNT(Id) completedCount
-    FROM DocumentLifecycleConfiguration__c
-    WHERE ContractType__c = :doc.ContractType__c
-    AND ProcessingStatus__c = 'Completed'
-    AND CreatedDate = LAST_N_DAYS:365
-];
+        // Count of completed documents for the contract type in last 365 days
+        AggregateResult completedResult = [
+            SELECT COUNT(Id) completedCount
+            FROM DocumentLifecycleConfiguration__c
+            WHERE ContractType__c = :doc.ContractType__c
+            AND ProcessingStatus__c = 'Completed'
+            AND CreatedDate = LAST_N_DAYS:365
+        ];
 
-// Extract values
-Decimal avgDays = (Decimal)totalResult.get('avgDays');
-Integer totalCount = (Integer)totalResult.get('totalCount');
-Integer completedCount = (Integer)completedResult.get('completedCount');
+        Decimal avgDays = (Decimal)totalResult.get('avgDays');
+        Integer totalCount = (Integer)totalResult.get('totalCount');
+        Integer completedCount = (Integer)completedResult.get('completedCount');
 
-
-        if (!completionStats.isEmpty()) {
-            AggregateResult stats = completionStats[0];
-            Decimal completionRate = ((Decimal)stats.get('completedCount') / (Decimal)stats.get('totalCount')) * 100;
-            Decimal avgDays = (Decimal)stats.get('avgDays') ?? 7;
+        // Only add prediction if there is data
+        if (totalCount > 0) {
+            Decimal completionRate = ((Decimal)completedCount / (Decimal)totalCount) * 100;
+            Decimal avgDaysSpent = avgDays != null ? avgDays : 7;
             predictions.add(new Prediction('Completion Likelihood', completionRate,
                 'Based on ' + doc.ContractType__c + ' contracts over the past year',
-                'Expected completion time: ' + avgDays.intValue() + ' days'));
+                'Expected completion time: ' + avgDaysSpent.intValue() + ' days'));
         }
 
         generateRegionalInsights(predictions, doc.Region__c);

@@ -150,7 +150,7 @@ metrics.put('systemHealth', systemHealth);
         try {
             List<ThreatAssessmentLog__c> threats = [
                 SELECT Id, UserId__c, ThreatLevel__c, RiskScore__c, ThreatsDetected__c, 
-                       AssessmentTimestamp__c, Activity__c, User__r.Name
+                       AssessmentTimestamp__c, Activity__c
                 FROM ThreatAssessmentLog__c 
                 WHERE CreatedDate = TODAY AND RiskScore__c >= 40
                 ORDER BY RiskScore__c DESC, AssessmentTimestamp__c DESC
@@ -160,7 +160,6 @@ metrics.put('systemHealth', systemHealth);
             for (ThreatAssessmentLog__c threat : threats) {
                 ActiveThreat activeThreat = new ActiveThreat();
                 activeThreat.id = threat.Id;
-                activeThreat.userId = threat.User__r.Name != null ? threat.User__r.Name : threat.UserId__c;
                 activeThreat.threatLevel = threat.ThreatLevel__c;
                 activeThreat.riskScore = threat.RiskScore__c.intValue();
                 activeThreat.description = threat.ThreatsDetected__c;
@@ -184,7 +183,7 @@ metrics.put('systemHealth', systemHealth);
         try {
             List<SecurityIncident__c> incidents = [
                 SELECT Id, IncidentType__c, Severity__c, Description__c, 
-                       DetectedTimestamp__c, Status__c, UserId__c, User__r.Name
+                       DetectedTimestamp__c, Status__c, UserId__c
                 FROM SecurityIncident__c 
                 WHERE CreatedDate = TODAY
                 ORDER BY DetectedTimestamp__c DESC
@@ -200,7 +199,6 @@ metrics.put('systemHealth', systemHealth);
                 alert.status = incident.Status__c;
                 alert.timestamp = incident.DetectedTimestamp__c;
                 alert.formattedTimestamp = formatTimestamp(incident.DetectedTimestamp__c);
-                alert.userId = incident.User__r.Name != null ? incident.User__r.Name : incident.UserId__c;
                 alert.variant = getAlertVariant(incident.Severity__c);
                 alert.iconName = getAlertIcon(incident.IncidentType__c);
                 alerts.add(alert);
@@ -286,12 +284,14 @@ metrics.put('systemHealth', systemHealth);
             List<ComplianceViolation> violations = new List<ComplianceViolation>();
             List<ComplianceViolationLog__c> violationLogs = [
                 SELECT Id, ViolationType__c, Severity__c, Description__c, 
-                       DetectedDate__c, Status__c, UserId__c, User__r.Name
+                       DetectedDate__c, Status__c, UserId__c
                 FROM ComplianceViolationLog__c 
                 WHERE DetectedDate__c = LAST_N_DAYS:7
                 ORDER BY DetectedDate__c DESC
                 LIMIT 10
             ];
+
+            Map<Id, User> userMap = new Map<Id, User>([SELECT Id, Name FROM User WHERE Id IN (SELECT UserId__c FROM ComplianceViolationLog__c WHERE Id IN :violationLogs)]);
             
             for (ComplianceViolationLog__c log : violationLogs) {
                 ComplianceViolation violation = new ComplianceViolation();
@@ -301,7 +301,8 @@ metrics.put('systemHealth', systemHealth);
                 violation.description = log.Description__c;
                 violation.detectedDate = log.DetectedDate__c;
                 violation.status = log.Status__c;
-                violation.userId = log.User__r.Name != null ? log.User__r.Name : log.UserId__c;
+                User u = userMap.get(log.UserId__c);
+                violation.userId = u != null ? u.Name : log.UserId__c;
                 violations.add(violation);
             }
             metrics.recentViolations = violations;
@@ -348,21 +349,18 @@ metrics.put('systemHealth', systemHealth);
                2.0 : (Decimal) timeStats[0].get('avgTime');
     }
     private static Decimal getSystemUptime() {
-    List<AggregateResult> uptimeStats = [
-        SELECT AVG(UptimePercentage__c) avgUptime
-        FROM SystemHealthMetric__c
-        WHERE MetricDate__c = LAST_N_DAYS:1
-    ];
-    
-    if (!uptimeStats.isEmpty() && uptimeStats[0].get('avgUptime') != null) {
-        return (Decimal)uptimeStats[0].get('avgUptime');
+        List<AggregateResult> uptimeStats = [
+            SELECT AVG(UptimePercentage__c) avgUptime
+            FROM SystemHealthMetric__c
+            WHERE MetricDate__c = LAST_N_DAYS:1
+        ];
+        
+        if (!uptimeStats.isEmpty() && uptimeStats[0].get('avgUptime') != null) {
+            return (Decimal)uptimeStats[0].get('avgUptime');
+        }
+        
+        return 99.5;
     }
-    return 0;
-
-
-
-return uptimeStats.isEmpty() || uptimeStats[0].get('avgUptime') == null ? 99.5 : (Decimal) uptimeStats[0].get('avgUptime');
-}
 
 private static Integer getCriticalIncidentCount() {
     List<AggregateResult> incidentStats = [

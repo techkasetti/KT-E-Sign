@@ -1,12 +1,23 @@
 public class AdvancedAnalyticsDashboardController {
-    
+
+    public class PredictiveAnalyticsResult {
+        @AuraEnabled public Boolean success;
+        @AuraEnabled public String forecastType;
+        @AuraEnabled public List<Object> predictions;
+        @AuraEnabled public String modelVersion;
+        @AuraEnabled public String message;
+        // Add other fields as needed
+
+        public PredictiveAnalyticsResult() {}
+    }
+
     @AuraEnabled(cacheable=false)
     public static Map<String, Object> getAdvancedDashboardData(Integer timeframeDays) {
         try {
             Date startDate = System.today().addDays(-timeframeDays);
             
             // Generate comprehensive analytics using AI engine
-            Map<String, Object> dashboardData = AIAnalyticsEngine.generateComprehensiveAnalytics(startDate);
+            Map<String, Object> dashboardData = AIAnalyticsEngine.generateAnalyticsDashboard('Last' + timeframeDays + 'Days', new List<String>{'performance', 'predictive', 'behavior', 'security', 'cost', 'satisfaction'});
             
             // Add real-time system health
             dashboardData.put('systemHealth', getSystemHealthMetrics());
@@ -72,31 +83,31 @@ public static List<Map<String, Object>> getAnomalyDetectionResults(Integer hours
         DateTime startTime = System.now().addHours(-hours);
         
         // Get document generation anomalies
-        List<AnomalyAlert> docAnomalies = AIAnalyticsEngine.detectDocumentGenerationAnomalies();
-        for (AnomalyAlert anomaly : docAnomalies) {
-            if (anomaly.timestamp >= startTime) {
+        List<AIAnalyticsEngine.AnomalyAlert> docAnomalies = AIAnalyticsEngine.detectDocumentGenerationAnomalies();
+        for (AIAnalyticsEngine.AnomalyAlert docAnomaly : docAnomalies) {
+            if (docAnomaly.timestamp >= startTime) {
                 Map<String, Object> anomalyMap = new Map<String, Object>();
-                anomalyMap.put('type', anomaly.type);
-                anomalyMap.put('description', anomaly.description);
-                anomalyMap.put('severity', anomaly.severity);
-                anomalyMap.put('timestamp', anomaly.timestamp);
-                anomalyMap.put('magnitude', anomaly.magnitude);
-                anomalyMap.put('suggestedActions', anomaly.suggestedActions);
+                anomalyMap.put('type', docAnomaly.type);
+                anomalyMap.put('description', docAnomaly.description);
+                anomalyMap.put('severity', docAnomaly.severity);
+                anomalyMap.put('timestamp', docAnomaly.timestamp);
+                anomalyMap.put('magnitude', docAnomaly.magnitude);
+                anomalyMap.put('suggestedActions', docAnomaly.suggestedActions);
                 anomalies.add(anomalyMap);
             }
         }
         
         // Get signature request anomalies
-        List<AnomalyAlert> sigAnomalies = AIAnalyticsEngine.detectSignatureRequestAnomalies();
-        for (AnomalyAlert anomaly : sigAnomalies) {
-            if (anomaly.timestamp >= startTime) {
+        List<AIAnalyticsEngine.AnomalyAlert> sigAnomalies = AIAnalyticsEngine.detectSignatureRequestAnomalies();
+        for (AIAnalyticsEngine.AnomalyAlert sigAnomaly : sigAnomalies) {
+            if (sigAnomaly.timestamp >= startTime) {
                 Map<String, Object> anomalyMap = new Map<String, Object>();
-                anomalyMap.put('type', anomaly.type);
-                anomalyMap.put('description', anomaly.description);
-                anomalyMap.put('severity', anomaly.severity);
-                anomalyMap.put('timestamp', anomaly.timestamp);
-                anomalyMap.put('magnitude', anomaly.magnitude);
-                anomalyMap.put('suggestedActions', anomaly.suggestedActions);
+                anomalyMap.put('type', sigAnomaly.type);
+                anomalyMap.put('description', sigAnomaly.description);
+                anomalyMap.put('severity', sigAnomaly.severity);
+                anomalyMap.put('timestamp', sigAnomaly.timestamp);
+                anomalyMap.put('magnitude', sigAnomaly.magnitude);
+                anomalyMap.put('suggestedActions', sigAnomaly.suggestedActions);
                 anomalies.add(anomalyMap);
             }
         }
@@ -120,7 +131,7 @@ public static Map<String, Object> runMLDocumentAnalysis(String documentId) {
         ];
         
         // Run ML classification
-        DocumentClassificationResult classification = MLIntegrationService.classifyDocument(
+        MLIntegrationService.DocumentClassificationResult classification = MLIntegrationService.classifyDocument(
             document.DocumentContent__c, 
             document.ContractType__c
         );
@@ -172,7 +183,7 @@ public static Map<String, Object> getFraudDetectionAnalysis(String signatureRequ
         signatureData.put('timestamp', System.now());
         
         // Call ML fraud detection service
-        FraudScoringResult fraudResult = MLIntegrationService.calculateFraudScore(signatureData);
+        MLIntegrationService.FraudScoringResult fraudResult = MLIntegrationService.calculateFraudScore(signatureData);
         
         Map<String, Object> analysis = new Map<String, Object>();
         analysis.put('signatureRequestId', signatureRequestId);
@@ -221,16 +232,16 @@ public static Map<String, Object> generatePredictiveForecasts(String forecastTyp
         }
         
         // Call ML predictive analytics service
-        PredictiveAnalyticsResult prediction = MLIntegrationService.generatePredictions(
-            forecastType, inputData
-        );
-        
+       MLIntegrationService.PredictiveAnalyticsResult prediction = MLIntegrationService.generatePredictions(
+    forecastType, inputData
+);
         Map<String, Object> forecast = new Map<String, Object>();
         forecast.put('forecastType', forecastType);
-        forecast.put('predictions', prediction);
+        // Add relevant fields from PredictiveAnalyticsResult to the map
+        Map<String, Object> predictionMap = new Map<String, Object>();
+       
         forecast.put('generatedAt', System.now());
         forecast.put('forecastHorizon', forecastDays);
-        
         return forecast;
         
     } catch (Exception e) {
@@ -349,8 +360,8 @@ private static Map<String, Object> getPerformanceOptimizationInsights(Date start
     
     return insights;
 }
-
-private static Map<String, Object> getSecurityAnalysisInsights(Date startDate) {
+@AuraEnabled
+public static Map<String, Object> getSecurityAnalysisInsights(Date startDate) {
     Map<String, Object> insights = new Map<String, Object>();
     
     // Security event analysis
@@ -397,7 +408,6 @@ private static Map<String, Object> getPredictiveTrendsInsights(Date startDate) {
     ];
     insights.put('volumeTrends', volumeTrends);
     
-   // Total requests per day
 List<AggregateResult> totalRequests = [
     SELECT DAY_ONLY(CreatedDate) createdDate,
            COUNT(Id) totalRequests
@@ -406,17 +416,43 @@ List<AggregateResult> totalRequests = [
     GROUP BY DAY_ONLY(CreatedDate)
     ORDER BY DAY_ONLY(CreatedDate)
 ];
+    // Total requests per day
+   
 
-// Completed requests per day
-List<AggregateResult> completedRequests = [
-    SELECT DAY_ONLY(CreatedDate) createdDate,
-           COUNT(Id) completedRequests,
-           AVG(Time_To_Complete_Hours__c) avgCompletionTime
-    FROM Signature_Request__c
-    WHERE CreatedDate >= :startDate AND Status__c = 'Completed'
-    GROUP BY DAY_ONLY(CreatedDate)
-    ORDER BY DAY_ONLY(CreatedDate)
-];
+    // Completed requests per day
+    List<AggregateResult> completedRequests = [
+        SELECT DAY_ONLY(CreatedDate) createdDate,
+               COUNT(Id) completedRequests,
+               AVG(Time_To_Complete_Hours__c) avgCompletionTime
+        FROM Signature_Request__c
+        WHERE CreatedDate >= :startDate AND Status__c = 'Completed'
+        GROUP BY DAY_ONLY(CreatedDate)
+        ORDER BY DAY_ONLY(CreatedDate)
+    ];
+
+    List<Map<String, Object>> completionTrends = new List<Map<String, Object>>();
+    Map<Date, Integer> totalMap = new Map<Date, Integer>();
+    for (AggregateResult tr : totalRequests) {
+        Date d = (Date)tr.get('createdDate');
+        totalMap.put(d, (Integer)tr.get('totalRequests'));
+    }
+    Map<Date, AggregateResult> completedMap = new Map<Date, AggregateResult>();
+    for (AggregateResult cr : completedRequests) {
+        Date d = (Date)cr.get('createdDate');
+        completedMap.put(d, cr);
+    }
+    for (Date d : totalMap.keySet()) {
+        Map<String, Object> trend = new Map<String, Object>();
+        trend.put('date', d);
+        Integer total = totalMap.get(d);
+        Integer completed = completedMap.containsKey(d) ? (Integer)completedMap.get(d).get('completedRequests') : 0;
+        Decimal avgTime = completedMap.containsKey(d) ? (Decimal)completedMap.get(d).get('avgCompletionTime') : 0;
+        trend.put('totalRequests', total);
+        trend.put('completedRequests', completed);
+        trend.put('avgCompletionTime', avgTime);
+        trend.put('completionRate', total > 0 ? (completed * 100.0) / total : 0);
+        completionTrends.add(trend);
+    }
 
     insights.put('completionTrends', completionTrends);
     
@@ -506,7 +542,7 @@ for (Date day : dailyCompletionsMap.keySet()) {
 
 
     
-    for (AggregateResult completion : dailyCompletions) {
+    for (Map<String, Object> completion : dailyCompletions) {
         Map<String, Object> dataPoint = new Map<String, Object>();
         dataPoint.put('date', completion.get('completionDate'));
         dataPoint.put('totalRequests', completion.get('totalRequests'));
@@ -630,12 +666,22 @@ List<AggregateResult> completedRequests = [
     GROUP BY DAY_ONLY(CreatedDate)
     ORDER BY DAY_ONLY(CreatedDate)
 ];
+    // Total compliance checks and average score
+List<AggregateResult> complianceStats = [
+    SELECT COUNT(Id) totalChecks, AVG(Overall_Compliance_Score__c) avgScore
+    FROM DocumentLifecycleConfiguration__c
+    WHERE CreatedDate >= :startDate
+];
 
-    
+// Compliant documents count
+Integer compliantDocs = [
+    SELECT COUNT()
+    FROM DocumentLifecycleConfiguration__c
+    WHERE CreatedDate >= :startDate AND Overall_Compliance_Score__c >= 80
+];
     if (!complianceStats.isEmpty()) {
         AggregateResult stats = complianceStats[0];
         Integer totalChecks = (Integer)stats.get('totalChecks');
-        Integer compliantDocs = (Integer)stats.get('compliantDocs');
         Decimal avgScore = (Decimal)stats.get('avgScore');
         
         compliance.put('totalComplianceChecks', totalChecks);
@@ -796,5 +842,23 @@ private static Decimal calculateAverageEngagementScore(Date startDate) {
     
     return 50; // Default neutral score
 }
+
+// Helper method to convert engagement score to grade
+private static String getGradeFromScore(Decimal score) {
+    if (score >= 90) {
+        return 'A+';
+    } else if (score >= 80) {
+        return 'A';
+    } else if (score >= 70) {
+        return 'B';
+    } else if (score >= 60) {
+        return 'C';
+    } else if (score >= 50) {
+        return 'D';
+    } else {
+        return 'F';
+    }
+}
+
 
 } // end of AdvancedAnalyticsDashboardController class

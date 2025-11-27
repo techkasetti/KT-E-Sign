@@ -1,5 +1,5 @@
-
-    public class SendEnvelopeJob implements Queueable, Database.AllowsCallouts {
+public class SendEnvelopeJob implements Queueable, Database.AllowsCallouts {
+        private static final Integer DOCUSIGN_TIMEOUT_MS = 120000;
         private String signerEmail, signerName, base64Pdf, envelopeSubject, docName;
         public SendEnvelopeJob(String signerEmail, String signerName, String base64Pdf, String envelopeSubject, String docName) {
             this.signerEmail = signerEmail; this.signerName = signerName; this.base64Pdf = base64Pdf; this.envelopeSubject = envelopeSubject; this.docName = docName;
@@ -28,14 +28,14 @@
                             DocuSign_Envelope__c env = new DocuSign_Envelope__c(Envelope_Id__c = envelopeId, Recipient_Email__c = signerEmail, Status__c = 'SENT', Created_Date__c = System.now());
                             insert env;
                         } catch (Exception e) {
-                            AuditTrailManager.logError('DOCUSIGN_PERSIST', e);
+                            AuditTrailManager.logError('DOCUSIGN_PERSIST', e.getMessage() + ' ' + e.getStackTraceString(), null);
                         }
                     }
-                } else {
+                } else {        
                     AuditTrailManager.logSystemActivity('DOCUSIGN_SEND_ERROR','HTTP ' + res.getStatusCode() + ' - ' + res.getBody());
                 }
             } catch (Exception ex) {
-                AuditTrailManager.logError('DOCUSIGN_JOB', ex);
+                AuditTrailManager.logError('DOCUSIGN_JOB', ex.getMessage() + ' ' + ex.getStackTraceString(), null);
             }
         }
     }

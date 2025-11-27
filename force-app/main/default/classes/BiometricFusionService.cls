@@ -1,11 +1,30 @@
 public class BiometricFusionService {
+    public class FusionResult {
+        public String authenticationLevel;
+        public Decimal fusedScore;
+        public FusionResult(String authenticationLevel, Decimal fusedScore) {
+            this.authenticationLevel = authenticationLevel;
+            this.fusedScore = fusedScore;
+        }
+    }
+@TestVisible
+private static Decimal test_callLivenessAPI(String base64Image) {
+    return callLivenessAPI(base64Image);
+}
+
     public static FusionResult authenticateUser(Map<String, Decimal> biometricScores) {
         // Weighted fusion algorithm implementation
-        // Calculate fused authentication score
-        // Determine authentication level
+        Decimal fusedScore = (biometricScores.get('faceScore') * 0.3) +
+                             (biometricScores.get('voiceScore') * 0.25) +
+                             (biometricScores.get('fingerprintScore') * 0.25) +
+                             (biometricScores.get('signatureScore') * 0.2);
+        String authenticationLevel = fusedScore >= 0.9 ? 'HIGHEST' :
+                                     fusedScore >= 0.8 ? 'HIGH' :
+                                     fusedScore >= 0.7 ? 'MEDIUM' : 'LOW';
+        return new FusionResult(authenticationLevel, fusedScore);
     }
 
-        public class BiometricScores {
+    public class BiometricScores {
         public Decimal faceScore;
         public Decimal voiceScore;
         public Decimal fingerprintScore;
@@ -13,7 +32,22 @@ public class BiometricFusionService {
         public Decimal fusedScore;
         public String authLevel;
     }
-    
+
+    public class BiometricData {
+        public String faceData;
+        public String voiceData;
+        public String fingerprintData;
+        public String signatureData;
+    }
+
+    public class AuthenticationResult {
+        public Decimal fusedScore;
+        public String authLevel;
+        public AuthenticationResult(Decimal fusedScore, String authLevel) {
+            this.fusedScore = fusedScore;
+            this.authLevel = authLevel;
+        }
+    }
 
     private static Decimal callLivenessAPI(String base64Image) {
     HttpRequest req = new HttpRequest();
@@ -28,6 +62,62 @@ public class BiometricFusionService {
     }
     return 0; // fallback
 }
+
+    // Helper: Process face biometric
+    private static Decimal processFaceBiometric(String faceData) {
+        // Example: Implement face recognition logic or call external API
+        // Return a score between 0 and 1
+        return 0.8;
+    }
+
+    // Helper: Process voice biometric
+    private static Decimal processVoiceBiometric(String voiceData) {
+        // Example: Implement voice recognition logic or call external API
+        // Return a score between 0 and 1
+        return 0.75;
+    }
+
+    // Helper: Process fingerprint biometric
+    private static Decimal processFingerprintBiometric(String fingerprintData) {
+        // Example: Implement fingerprint recognition logic or call external API
+        // Return a score between 0 and 1
+        return 0.85;
+    }
+
+    // Helper: Process signature biometric
+    private static Decimal processSignatureBiometric(String signatureData) {
+        // Example: Implement signature recognition logic or call external API
+        // Return a score between 0 and 1
+        return 0.7;
+    }
+
+    // Helper: Process face recognition
+    private static Decimal processFaceRecognition(String faceData) {
+        // Example: Implement face recognition logic or call external API
+        // Return a score between 0 and 1
+        return 0.8;
+    }
+
+    // Helper: Process voice recognition
+    private static Decimal processVoiceRecognition(String voiceData) {
+        // Example: Implement voice recognition logic or call external API
+        // Return a score between 0 and 1
+        return 0.75;
+    }
+
+    // Helper: Process fingerprint
+    private static Decimal processFingerprint(String fingerprintData) {
+        // Example: Implement fingerprint recognition logic or call external API
+        // Return a score between 0 and 1
+        return 0.85;
+    }
+
+    // Helper: Process signature pattern
+    private static Decimal processSignaturePattern(String signatureData) {
+        // Example: Implement signature recognition logic or call external API
+        // Return a score between 0 and 1
+        return 0.7;
+    }
 
     @AuraEnabled
     public static BiometricScores authenticateUser(Map<String, Object> biometricData) {
@@ -65,7 +155,8 @@ public class BiometricFusionService {
         
         return scores;
     }
-public static AuthenticationResult authenticateUser(BiometricData biometricData) {
+
+    public static AuthenticationResult authenticateUser(BiometricData biometricData) {
         // Face recognition score (weight: 0.3)
         Decimal faceScore = processFaceRecognition(biometricData.faceData);
         

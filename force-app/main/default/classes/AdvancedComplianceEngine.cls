@@ -1,13 +1,7 @@
 public class AdvancedComplianceEngine {
     
     // Compliance scoring thresholds
-    private static final Integer COMPLIANCE_THRESHOLD = 80;
-    private static final Map<String, Integer> SEVERITY_WEIGHTS = new Map<String, Integer>{
-        'CRITICAL' => 50,
-        'HIGH'     => 25,
-        'MEDIUM'   => 10,
-        'LOW'      => 5
-    };
+   
         public static final Decimal COMPLIANCE_THRESHOLD = 80.0;
     public static final Map<String, Integer> SEVERITY_WEIGHTS = new Map<String, Integer>{
         'CRITICAL' => 50,
@@ -32,7 +26,7 @@ public class AdvancedComplianceEngine {
             // Execute region-specific compliance checks
             if (region == 'EU') {
                 violations.addAll(checkGDPRCompliance(documentId));
-                violations.addAll(checkEIDASCompliance(documentId));
+               // violations.addAll(checkEIDASCompliance(documentId));
             }
             
             if (region == 'US') {
@@ -138,45 +132,33 @@ public class AdvancedComplianceEngine {
         
         return violations;
     }
-    private static List<ComplianceViolation> checkEIDASCompliance(String documentId) {
-        List<ComplianceViolation> violations = new List<ComplianceViolation>();
+    // private static List<ComplianceViolation> checkEIDASCompliance(String documentId) {
+    //     List<ComplianceViolation> violations = new List<ComplianceViolation>();
         
-        // Check signature method requirements for EU documents
-        List<Signature_Request__c> signatures = [
-            SELECT Id, SignatureMethod__c, SignatureData__c 
-            FROM Signature_Request__c 
-            WHERE DocumentId__c = :documentId
-        ];
+    //     // Check signature method requirements for EU documents
+    //     List<Signature_Request__c> signatures = [
+    //         SELECT Id, SignatureMethod__c, SignatureData__c 
+    //         FROM Signature_Request__c 
+    //         WHERE DocumentId__c = :documentId
+    //     ];
         
-        if (!signatures.isEmpty()) {
-            for (Signature_Request__c sig : signatures) {
-                if (String.isBlank(sig.SignatureData__c)) {
-                    violations.add(new ComplianceViolation(
-                        'EIDAS',
-                        'Insufficient Signature Data',
-                        'MEDIUM',
-                        'eIDAS requires comprehensive signature metadata',
-                        'Ensure all signature requests capture complete metadata'
-                    ));
-                }
-            }
-        }
+    //     if (!signatures.isEmpty()) {
+    //         for (Signature_Request__c sig : signatures) {
+    //             if (String.isBlank(sig.SignatureData__c)) {
+    //                 violations.add(new ComplianceViolation(
+    //                     'EIDAS',
+    //                     'Insufficient Signature Data',
+    //                     'MEDIUM',
+    //                     'eIDAS requires comprehensive signature metadata',
+    //                     'Ensure all signature requests capture complete metadata'
+    //                 ));
+    //             }
+    //         }
+    //     }
         
-        return violations;
-    }
-    private static Decimal calculateComplianceScore(List<ComplianceViolation> violations) {
-        if (violations.isEmpty()) {
-            return 100.0;
-        }
-        
-        Integer totalDeduction = 0;
-        for (ComplianceViolation violation : violations) {
-            totalDeduction += SEVERITY_WEIGHTS.get(violation.severity) ?? 1;
-        }
-        
-        return Math.max(0, 100 - totalDeduction);
-    }
-
+    //     return violations;
+    // }
+   
     private static List<ComplianceViolation> checkGDPRCompliance(String documentId) {
         List<ComplianceViolation> violations = new List<ComplianceViolation>();
         
@@ -465,10 +447,17 @@ public class AdvancedComplianceEngine {
         }
     }
     
+    public class BulkComplianceResult {
+        @InvocableVariable public String documentId;
+        @InvocableVariable public String region;
+        @InvocableVariable public String contractType;
+        @InvocableVariable public Integer complianceScore;
+        @InvocableVariable public String overallStatus;
+    }
+
     @InvocableMethod(label='Perform Bulk Compliance Check' description='Run advanced compliance checks on multiple documents')
-    public static List<ComplianceReport> performBulkCompliance(List<BulkComplianceRequest> requests) {
-        List<ComplianceReport> reports = new List<ComplianceReport>();
-        
+    public static List<BulkComplianceResult> performBulkCompliance(List<BulkComplianceRequest> requests) {
+        List<BulkComplianceResult> results = new List<BulkComplianceResult>();
         for (BulkComplianceRequest request : requests) {
             try {
                 ComplianceReport report = performAdvancedCompliance(
@@ -476,16 +465,24 @@ public class AdvancedComplianceEngine {
                     request.region, 
                     request.contractType
                 );
-                reports.add(report);
+                BulkComplianceResult result = new BulkComplianceResult();
+                result.documentId = request.documentId;
+                result.region = request.region;
+                result.contractType = request.contractType;
+                result.complianceScore = (report.complianceScore != null) ? Integer.valueOf(report.complianceScore) : 0;
+                result.overallStatus = report.overallStatus;
+                results.add(result);
             } catch (Exception e) {
-                reports.add(new ComplianceReport('Error', 0, new List<ComplianceViolation>{
-                    new ComplianceViolation('SYSTEM', 'Processing Error', 'CRITICAL', 
-                                          e.getMessage(), 'Contact system administrator')
-                }));
+                BulkComplianceResult errorResult = new BulkComplianceResult();
+                errorResult.documentId = request.documentId;
+                errorResult.region = request.region;
+                errorResult.contractType = request.contractType;
+                errorResult.complianceScore = 0;
+                errorResult.overallStatus = 'ERROR: ' + e.getMessage();
+                results.add(errorResult);
             }
         }
-        
-        return reports;
+        return results;
     }
     
 
@@ -493,13 +490,13 @@ public class AdvancedComplianceEngine {
     private static void logComplianceAudit(ComplianceReport report) {
         try {
             AuditTrail__c audit = new AuditTrail__c(
-                RecordId__c    = report.documentId,
-            Action__c      = 'ADVANCED_COMPLIANCE_CHECK',
-            Status__c      = report.overallStatus,
-            Timestamp__c   = report.checkDate,
-            UserDetails__c = UserInfo.getName() + ' (' + UserInfo.getUsername() + ')',
-            SystemInfo__c  = 'Advanced compliance check for ' + report.region + ' ' + report.contractType,
-            AdditionalInfo__c = 'Score: ' + report.complianceScore + '% | Violations: ' + report.violations.size()
+                    RecordId__c    = report.documentId,
+                    Action__c      = 'ADVANCED_COMPLIANCE_CHECK',
+                    Status__c      = report.overallStatus,
+                    Timestamp__c   = Datetime.valueOf(report.timestamp),
+                    UserDetails__c = UserInfo.getName() + ' (' + UserInfo.getUsername() + ')',
+                    SystemInfo__c  = 'Advanced compliance check for ' + report.region + ' ' + report.contractType,
+                    AdditionalInfo__c = 'Score: ' + report.complianceScore + '% | Violations: ' + report.violations.size()
                 );
             insert audit;
             
@@ -516,7 +513,6 @@ public class AdvancedComplianceEngine {
         List<ComplianceViolation> violations, Id auditId
     ) {
         List<ComplianceViolationRecord__c> records = new List<ComplianceViolationRecord__c>();
-        
         for (ComplianceViolation violation : violations) {
             ComplianceViolationRecord__c record = new ComplianceViolationRecord__c(
                 AuditTrail__c    = auditId,
@@ -532,16 +528,6 @@ public class AdvancedComplianceEngine {
         return records;
     }
     
-    // Wrapper: Compliance Report
-    public class ComplianceReport {
-        @AuraEnabled public String documentId;
-        @AuraEnabled public String region;
-        @AuraEnabled public String contractType;
-        @AuraEnabled public DateTime checkDate;
-        @AuraEnabled public Integer complianceScore;
-        @AuraEnabled public String overallStatus;
-        @AuraEnabled public List<ComplianceViolation> violations;
-    }
     
     // Wrapper: Compliance Violation
     public class ComplianceViolation {
@@ -550,35 +536,18 @@ public class AdvancedComplianceEngine {
         @AuraEnabled public String severity;
         @AuraEnabled public String description;
         @AuraEnabled public String recommendation;
+            public ComplianceViolation() {}
+
+            public ComplianceViolation(String regulationType, String violationType, String severity, String description, String recommendation) {
+                this.regulationType = regulationType;
+                this.violationType = violationType;
+                this.severity = severity;
+                this.description = description;
+                this.recommendation = recommendation;
+            }
     }
     
-    // Bulk Compliance Processing
-    @InvocableMethod(label='Run Bulk Compliance Check')
-    public static List<ComplianceReport> performBulkCompliance(List<BulkComplianceRequest> requests) {
-        List<ComplianceReport> reports = new List<ComplianceReport>();
-        
-        for (BulkComplianceRequest request : requests) {
-            try {
-                ComplianceReport report = performAdvancedCompliance(
-                    request.documentId,
-                request.region,
-                request.contractType
-                    );
-                reports.add(report);
-            } catch (Exception e) {
-                // Create error report
-                ComplianceReport errorReport = new ComplianceReport();
-                errorReport.documentId      = request.documentId;
-                errorReport.region          = request.region;
-                errorReport.contractType    = request.contractType;
-                errorReport.complianceScore = 0;
-                errorReport.overallStatus   = 'ERROR: ' + e.getMessage();
-                errorReport.violations      = new List<ComplianceViolation>();
-                reports.add(errorReport);
-            }
-        }
-        return reports;
-    }
+   
     
     // Wrapper: Bulk Request
     public class BulkComplianceRequest {
@@ -589,46 +558,53 @@ public class AdvancedComplianceEngine {
 
     // Wrapper Classes
     public class ComplianceReport {
+        @AuraEnabled public String documentId { get; set; }
+        @AuraEnabled public String region { get; set; }
+        @AuraEnabled public String contractType { get; set; }
         @AuraEnabled public String overallStatus { get; set; }
         @AuraEnabled public Decimal complianceScore { get; set; }
         @AuraEnabled public List<ComplianceViolation> violations { get; set; }
         @AuraEnabled public String timestamp { get; set; }
         @AuraEnabled public String recommendation { get; set; }
-        
+
         public ComplianceReport(String status, Decimal score, List<ComplianceViolation> viols) {
-    this.overallStatus = status;
-    this.complianceScore = score;
-    this.violations = viols;
-    this.timestamp = System.now().format(); // properly call format()
-    this.recommendation = generateOverallRecommendation(viols);
-}
-private String generateOverallRecommendation(List<ComplianceViolation> violations) {
-    if (violations.isEmpty()) {
-        return 'Document is fully compliant with all applicable regulations.';
+            this.overallStatus = status;
+            this.complianceScore = score;
+            this.violations = viols;
+            this.timestamp = System.now().format();
+            this.recommendation = generateOverallRecommendation(viols);
+        }
+
+        public ComplianceReport(String documentId, String region, String contractType, String status, Decimal score, List<ComplianceViolation> viols) {
+            this.documentId = documentId;
+            this.region = region;
+            this.contractType = contractType;
+            this.overallStatus = status;
+            this.complianceScore = score;
+            this.violations = viols;
+            this.timestamp = System.now().format();
+            this.recommendation = generateOverallRecommendation(viols);
+        }
+
+        private String generateOverallRecommendation(List<ComplianceViolation> violations) {
+            if (violations.isEmpty()) {
+                return 'Document is fully compliant with all applicable regulations.';
+            }
+            Integer criticalCount = 0;
+            Integer highCount = 0;
+            for (ComplianceViolation violation : violations) {
+                if (violation.severity == 'CRITICAL') criticalCount++;
+                if (violation.severity == 'HIGH') highCount++;
+            }
+            if (criticalCount > 0) {
+                return 'URGENT: Address ' + criticalCount + ' critical compliance issues before proceeding.';
+            } else if (highCount > 0) {
+                return 'Review and resolve ' + highCount + ' high-priority compliance issues.';
+            } else {
+                return 'Minor compliance adjustments recommended for optimal adherence.';
+            }
+        }
     }
 
-    Integer criticalCount = 0;
-    Integer highCount = 0;
-
-    for (ComplianceViolation violation : violations) {
-        if (violation.severity == 'CRITICAL') criticalCount++;
-        if (violation.severity == 'HIGH') highCount++;
-    }
-
-    if (criticalCount > 0) {
-        return 'URGENT: Address ' + criticalCount + ' critical compliance issues before proceeding.';
-    } else if (highCount > 0) {
-        return 'Review and resolve ' + highCount + ' high-priority compliance issues.';
-    } else {
-        return 'Minor compliance adjustments recommended for optimal adherence.';
-    }
-}
-
-public class BulkComplianceRequest {
-    @InvocableVariable public String documentId;
-    @InvocableVariable public String region;
-    @InvocableVariable public String contractType;
-}
 
     }
-}

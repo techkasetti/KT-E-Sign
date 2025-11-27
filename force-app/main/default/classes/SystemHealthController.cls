@@ -235,12 +235,18 @@ public class SystemHealthController {
 
     private static Integer getActiveSessionCount() {
         try {
-            return [
-                SELECT COUNT(Id)
+            Integer successCount = 0;
+            List<LoginHistory> recentLogins = [
+                SELECT Status
                 FROM LoginHistory
                 WHERE LoginTime >= :System.now().addHours(-1)
-                AND Status = 'Success'
             ];
+            for(LoginHistory login : recentLogins) {
+                if (login.Status == 'Success') {
+                    successCount++;
+                }
+            }
+            return successCount;
         } catch (Exception e) {
             return 25;
         }

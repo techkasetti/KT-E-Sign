@@ -1,70 +1,100 @@
+<!-- systemHealthDashboard.html -->
+<template>
+    <lightning-card title="System Health Dashboard" icon-name="utility:pulse">
+        <div class="slds-p-around_medium">
+            <!-- Loading Spinner -->
+            <template if:true={isloading}>
+                <lightning-spinner alternative-text="Loading..." variant="brand"></lightning-spinner>
+            </template>
 
+            <!-- Error Panel -->
+            <template if:true={error}>
+                <div class="slds-box slds-theme_error slds-p-around_medium">
+                    <p><strong>Error Loading Dashboard:</strong> {errorText}</p>
+                </div>
+            </template>
 
-
-
-
-
-
-
- <template>
-    <lightning-card title="System Health Monitor" icon-name="standard:service_report">
-        <div class="slds-card__body slds-card__body_inner">
-            
-            <div class="health-indicators slds-grid slds-wrap slds-m-bottom_large">
-                <div class="slds-col slds-size_1-of-3 slds-p-around_small">
-                    <div class="health-card slds-box slds-text-align_center">
-                        <lightning-icon icon-name="utility:success" variant={systemStatusVariant} size="large"></lightning-icon>
-                        <h3>System Status</h3>
-                        <p>{systemStatus}</p>
+            <!-- Main Dashboard Content -->
+            <template if:false={isloading}>
+                <!-- Section 1: Overall System Health -->
+                <div class="slds-grid slds-gutters slds-p-bottom_large">
+                    <div class="slds-col slds-size_1-of-3">
+                        <lightning-card title="Overall Status">
+                            <div class="slds-p-horizontal_small">
+                                <p class={overallStatusVariant}>
+                                    <lightning-icon icon-name={overallStatusIcon} size="large"></lightning-icon>
+                                    <span class="slds-text-heading_large slds-p-left_small">{healthData.overallStatus}</span>
+                                </p>
+                            </div>
+                        </lightning-card>
+                    </div>
+                    <div class="slds-col slds-size_1-of-3">
+                        <lightning-card title="Health Score">
+                            <div class="slds-p-horizontal_small slds-text-align_center">
+                                <span class={healthScoreVariant}>{healthData.healthScore}%</span>
+                            </div>
+                        </lightning-card>
+                    </div>
+                    <div class="slds-col slds-size_1-of-3">
+                        <lightning-card title="System Uptime (Last 7 Days)">
+                             <div class="slds-p-horizontal_small slds-text-align_center">
+                                <span class={uptimeVariant}>{healthData.systemUptime}%</span>
+                            </div>
+                        </lightning-card>
                     </div>
                 </div>
-                
-                <div class="slds-col slds-size_1-of-3 slds-p-around_small">
-                    <div class="health-card slds-box slds-text-align_center">
-                        <lightning-icon icon-name="utility:dashboard" variant="inverse" size="large"></lightning-icon>
-                        <h3>Response Time</h3>
-                        <p>{averageResponseTime}ms</p>
+
+                <!-- Section 2: Key Performance Indicators -->
+                <h3 class="slds-text-heading_medium slds-p-bottom_small">Key Performance Indicators</h3>
+                <div class="slds-grid slds-gutters slds-p-bottom_large">
+                    <div class="slds-col slds-size_1-of-4">
+                        <div class="slds-box slds-p-around_medium slds-text-align_center">
+                            <p class="slds-text-title_caps slds-m-bottom_x-small">Avg. Response Time</p>
+                            <p class="slds-text-heading_large">{healthData.avgResponseTime} ms</p>
+                        </div>
+                    </div>
+                    <div class="slds-col slds-size_1-of-4">
+                        <div class="slds-box slds-p-around_medium slds-text-align_center">
+                            <p class="slds-text-title_caps slds-m-bottom_x-small">Active User Sessions</p>
+                            <p class="slds-text-heading_large">{healthData.activeSessions}</p>
+                        </div>
+                    </div>
+                    <div class="slds-col slds-size_1-of-4">
+                        <div class="slds-box slds-p-around_medium slds-text-align_center">
+                            <p class="slds-text-title_caps slds-m-bottom_x-small">Error Rate (24h)</p>
+                            <p class="slds-text-heading_large">{healthData.errorRate}%</p>
+                        </div>
+                    </div>
+                    <div class="slds-col slds-size_1-of-4">
+                        <div class="slds-box slds-p-around_medium slds-text-align_center">
+                            <p class="slds-text-title_caps slds-m-bottom_x-small">API Success Rate</p>
+                            <p class="slds-text-heading_large">{apiSuccessRate}%</p>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="slds-col slds-size_1-of-3 slds-p-around_small">
-                    <div class="health-card slds-box slds-text-align_center">
-                        <lightning-icon icon-name="utility:volume_high" variant="warning" size="large"></lightning-icon>
-                        <h3>Active Users</h3>
-                        <p>{activeUsers}</p>
+
+                <!-- Section 3: Component Health & Real-time Metrics -->
+                <div class="slds-grid slds-gutters">
+                    <div class="slds-col slds-size_1-of-2">
+                        <h3 class="slds-text-heading_medium slds-p-bottom_small">Component Status</h3>
+                         <lightning-datatable
+                            key-field="id"
+                            data={componentHealth}
+                            columns={componentColumns}
+                            hide-checkbox-column="true">
+                        </lightning-datatable>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2">
+                        <h3 class="slds-text-heading_medium slds-p-bottom_small">Metrics (Today)</h3>
+                        <div class="slds-box slds-p-around_medium">
+                             <p><strong>Documents Generated:</strong> {realTimeMetrics.todayDocuments}</p>
+                             <p><strong>Signatures Completed:</strong> {realTimeMetrics.todaySignatures}</p>
+                             <p><strong>Pending Signatures:</strong> {realTimeMetrics.pendingSignatures}</p>
+                             <p><strong>Active Users Today:</strong> {realTimeMetrics.activeUsers}</p>
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="performance-section">
-                <h3 class="slds-text-heading_small slds-m-bottom_medium">Recent Performance Metrics</h3>
-                <template if:true={performanceData}>
-                    <lightning-datatable 
-                        key-field="Id" 
-                        data={performanceData} 
-                        columns={performanceColumns}
-                        hide-checkbox-column="true">
-                    </lightning-datatable>
-                </template>
-            </div>
-            
-            <div class="error-section slds-m-top_large">
-                <h3 class="slds-text-heading_small slds-m-bottom_medium">Recent Errors</h3>
-                <template if:true={errorData}>
-                    <lightning-datatable 
-                        key-field="Id" 
-                        data={errorData} 
-                        columns={errorColumns}
-                        hide-checkbox-column="true">
-                    </lightning-datatable>
-                </template>
-                <template if:false={errorData}>
-                    <div class="no-errors slds-text-align_center slds-p-around_medium">
-                        <lightning-icon icon-name="utility:success" variant="success" size="small"></lightning-icon>
-                        <span class="slds-m-left_small">No recent errors detected</span>
-                    </div>
-                </template>
-            </div>
+            </template>
         </div>
     </lightning-card>
-</template> 
+</template>

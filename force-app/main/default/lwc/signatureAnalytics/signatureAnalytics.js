@@ -1,13 +1,8 @@
-
-// Developer_build_step_by_step_impl_e_sign v11 ----------------------------------------------------------------
-
-
 import { LightningElement, track, wire } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
 import getAnalyticsData from '@salesforce/apex/AnalyticsController.getAnalyticsData';
 import getRecentActivity from '@salesforce/apex/AnalyticsController.getRecentActivity';
 import { loadScript } from 'lightning/platformResourceLoader';
-import ChartJS from '@salesforce/resourceUrl/ChartJS';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 export default class SignatureAnalytics extends LightningElement {

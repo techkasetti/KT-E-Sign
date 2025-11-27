@@ -1,3 +1,53 @@
+<!-- livenessDetection.html -->
 <template>
-    
+    <div class="slds-box slds-theme_default slds-p-around_medium liveness-container">
+        <template if:false={isComplete}>
+            <!-- Title and Instructions -->
+            <h2 class="slds-text-heading_medium slds-text-align_center slds-m-bottom_medium">Liveness Verification</h2>
+            <p class="slds-text-align_center slds-m-bottom_medium" lwc:dom="manual"></p>
+
+            <!-- Camera Feed and Overlay -->
+            <div class="camera-wrapper slds-m-bottom_medium">
+                <video lwc:dom="manual" class="video-feed" autoplay muted playsinline></video>
+                <div class="overlay"></div>
+                <template if:true={isLoading}>
+                    <div class="spinner-container">
+                        <lightning-spinner alternative-text="Processing..." size="large"></lightning-spinner>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Action Button -->
+            <div class="slds-text-align_center">
+                <lightning-button 
+                    label="Start Verification" 
+                    variant="brand" 
+                    onclick={startVerification} 
+                    disabled={isVerificationStarted}>
+                </lightning-button>
+            </div>
+        </template>
+
+        <!-- Completion State -->
+        <template if:true={isComplete}>
+            <div class="slds-text-align_center">
+                <template if:true={livenessResult.isValid}>
+                    <div class="slds-m-vertical_large">
+                        <lightning-icon icon-name="utility:success" size="large" variant="success"></lightning-icon>
+                        <h2 class="slds-text-heading_medium slds-m-top_medium">Verification Successful</h2>
+                        <p>Your identity has been verified.</p>
+                        <p class="slds-text-body_small slds-m-top_medium">Confidence Score: {livenessResult.overallTrustScore}%</p>
+                    </div>
+                </template>
+                <template if:false={livenessResult.isValid}>
+                    <div class="slds-m-vertical_large">
+                        <lightning-icon icon-name="utility:error" size="large" variant="error"></lightning-icon>
+                        <h2 class="slds-text-heading_medium slds-m-top_medium">Verification Failed</h2>
+                        <p>{errorMessage}</p>
+                        <lightning-button label="Try Again" onclick={resetComponent} class="slds-m-top_medium"></lightning-button>
+                    </div>
+                </template>
+            </div>
+        </template>
+    </div>
 </template>

@@ -1,4 +1,4 @@
-    public class MultiModalProcessor {
+public class MultiModalProcessor {
         public static Map<String, Object> processDocument(String documentId, String processingType) {
             Map<String, Object> result = new Map<String, Object>();
             

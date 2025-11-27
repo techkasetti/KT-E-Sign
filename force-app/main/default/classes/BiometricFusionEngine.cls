@@ -1,31 +1,39 @@
 public class BiometricFusionEngine {
+    public class FusionResult {
+    public String authenticationLevel;
+    public Decimal weightedScore;
+    public FusionResult(String authenticationLevel, Decimal weightedScore) {
+        this.authenticationLevel = authenticationLevel;
+        this.weightedScore = weightedScore;
+    }
+}
+
     @AuraEnabled(cacheable=false)
     public static FusionResult fuseMultiModalBiometrics(String sessionId, Map<String, Decimal> biometricScores) {
-        BiometricFusion__c fusion = new BiometricFusion__c(
-            Session_ID__c = sessionId,
-            Fusion_Timestamp__c = System.now(),
-            Face_Recognition_Score__c = biometricScores.get('faceRecognition'),
-            Voice_Recognition_Score__c = biometricScores.get('voiceRecognition'),
-            Fingerprint_Score__c = biometricScores.get('fingerprint'),
-            Signature_Pattern_Score__c = biometricScores.get('signaturePattern')
-        );
-        
-        // Apply weighted fusion algorithm
-        Decimal weightedScore = calculateWeightedFusion(biometricScores);
-        fusion.Weighted_Fusion_Score__c = weightedScore;
-        
-        // Determine authentication level
-        if (weightedScore >= 90) {
-            fusion.Authentication_Level__c = 'HIGH_CONFIDENCE';
-        } else if (weightedScore >= 75) {
-            fusion.Authentication_Level__c = 'MEDIUM_CONFIDENCE';
-        } else if (weightedScore >= 60) {
-            fusion.Authentication_Level__c = 'LOW_CONFIDENCE';
-        } else {
-            fusion.Authentication_Level__c = 'FAILED';
-        }
-        
-        insert fusion;
+            BiometricFusion__c fusion = new BiometricFusion__c();
+            fusion.Session_ID__c = sessionId;
+            fusion.Fusion_Timestamp__c = System.now();
+            fusion.Face_Recognition_Score__c = biometricScores.get('faceRecognition');
+            fusion.Voice_Recognition_Score__c = biometricScores.get('voiceRecognition');
+            fusion.Fingerprint_Score__c = biometricScores.get('fingerprint');
+            fusion.Signature_Pattern_Score__c = biometricScores.get('signaturePattern');
+            
+            // Apply weighted fusion algorithm
+            Decimal weightedScore = calculateWeightedFusion(biometricScores);
+            fusion.Weighted_Fusion_Score__c = weightedScore;
+            
+            // Determine authentication level
+            if (weightedScore >= 90) {
+                fusion.Authentication_Level__c = 'HIGH_CONFIDENCE';
+            } else if (weightedScore >= 75) {
+                fusion.Authentication_Level__c = 'MEDIUM_CONFIDENCE';
+            } else if (weightedScore >= 60) {
+                fusion.Authentication_Level__c = 'LOW_CONFIDENCE';
+            } else {
+                fusion.Authentication_Level__c = 'FAILED';
+            }
+            
+            insert fusion;
         return new FusionResult(fusion.Authentication_Level__c, weightedScore);
     }
     

@@ -1,7 +1,3 @@
-// Developer_build_step_by_step_impl_e_sign v4.........................................................
-
-
-
 import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { NavigationMixin } from 'lightning/navigation';

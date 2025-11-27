@@ -1,55 +1,55 @@
 public class AdvancedSecurityController {
 
-    // Biometric signature validation
-    @AuraEnabled
-    public static BiometricValidationResult validateBiometricSignature(
-        String signatureRequestId,
-        String biometricData,
-        String deviceFingerprint
-    ) {
-        try {
-            BiometricValidationResult result = new BiometricValidationResult();
+    // // Biometric signature validation
+    // @AuraEnabled
+    // public static BiometricValidationResult validateBiometricSignature(
+    //     String signatureRequestId,
+    //     String biometricData,
+    //     String deviceFingerprint
+    // ) {
+    //     try {
+    //         BiometricValidationResult result = new BiometricValidationResult();
 
-            // Get signature request details
-            Signature_Request__c request = [
-                SELECT Id, SignerEmail__c, SignerName__c, DocumentId__c
-                FROM Signature_Request__c
-                WHERE Id = :signatureRequestId
-                LIMIT 1
-            ];
+    //         // Get signature request details
+    //         Signature_Request__c request = [
+    //             SELECT Id, SignerEmail__c, SignerName__c, DocumentId__c
+    //             FROM Signature_Request__c
+    //             WHERE Id = :signatureRequestId
+    //             LIMIT 1
+    //         ];
 
-            // Validate biometric data
-            result.livenessScore = validateLivenessDetection(biometricData);
-            result.antiSpoofingScore = validateAntiSpoofing(biometricData);
-            result.deviceTrustScore = validateDeviceFingerprint(deviceFingerprint);
+    //         // Validate biometric data
+    //         result.livenessScore = validateLivenessDetection(biometricData);
+    //         result.antiSpoofingScore = validateAntiSpoofing(biometricData);
+    //         result.deviceTrustScore = validateDeviceFingerprint(deviceFingerprint);
 
-            // Calculate overall trust score
-            result.overallTrustScore = calculateTrustScore(
-                result.livenessScore,
-                result.antiSpoofingScore,
-                result.deviceTrustScore
-            );
+    //         // Calculate overall trust score
+    //         result.overallTrustScore = calculateTrustScore(
+    //             result.livenessScore,
+    //             result.antiSpoofingScore,
+    //             result.deviceTrustScore
+    //         );
 
-            // Create validation record
-            BiometricValidation__c validation = new BiometricValidation__c(
-                SignatureRequest__c = signatureRequestId,
-                LivenessScore__c = result.livenessScore,
-                AntiSpoofingScore__c = result.antiSpoofingScore,
-                DeviceTrustScore__c = result.deviceTrustScore,
-                OverallTrustScore__c = result.overallTrustScore,
-                ValidationTimestamp__c = System.now(),
-                DeviceFingerprint__c = deviceFingerprint
-            );
-            insert validation;
+    //         // Create validation record
+    //         BiometricValidation__c validation = new BiometricValidation__c(
+    //             SignatureRequest__c = signatureRequestId,
+    //             LivenessScore__c = result.livenessScore,
+    //             AntiSpoofingScore__c = result.antiSpoofingScore,
+    //             DeviceTrustScore__c = result.deviceTrustScore,
+    //             OverallTrustScore__c = result.overallTrustScore,
+    //             ValidationTimestamp__c = System.now(),
+    //             DeviceFingerprint__c = deviceFingerprint
+    //         );
+    //         insert validation;
 
-            result.validationId = validation.Id;
-            result.isValid = result.overallTrustScore >= 85; // 85% confidence threshold
+    //         result.validationId = validation.Id;
+    //         result.isValid = result.overallTrustScore >= 85; // 85% confidence threshold
 
-            return result;
-        } catch (Exception e) {
-            throw new AuraHandledException('Biometric validation failed: ' + e.getMessage());
-        }
-    }
+    //         return result;
+    //     } catch (Exception e) {
+    //         throw new AuraHandledException('Biometric validation failed: ' + e.getMessage());
+    //     }
+    // }
 
     // Liveness detection using ML analysis
     private static Decimal validateLivenessDetection(String biometricData) {
@@ -121,9 +121,9 @@ private static Decimal validateAntiSpoofing(String biometricData) {
         // Check for challenge-response patterns
         if (bioData.containsKey('challengeResponse')) {
             Map<String, Object> challenge = (Map<String, Object>) bioData.get('challengeResponse');
-            Integer correctResponses = (Integer) challenge.get('correctResponses');
-            Integer totalChallenges = (Integer) challenge.get('totalChallenges');
-            if (correctResponses >= totalChallenges * 0.8) {
+            Decimal correctResponses = (challenge.containsKey('correctResponses')) ? Decimal.valueOf(String.valueOf(challenge.get('correctResponses'))) : 0;
+            Decimal totalChallenges = (challenge.containsKey('totalChallenges')) ? Decimal.valueOf(String.valueOf(challenge.get('totalChallenges'))) : 0;
+            if (totalChallenges > 0 && correctResponses >= totalChallenges * 0.8) {
                 antiSpoofScore += 30; // User passed challenge-response test
             }
         }
@@ -186,84 +186,84 @@ private static Decimal calculateTrustScore(Decimal liveness, Decimal antiSpoof, 
 }
 
 // Fraud detection algorithm
-@AuraEnabled
-public static FraudDetectionResult analyzeFraudRisk(
-    String signatureRequestId,
-    String signerBehaviorData
-) {
-    try {
-        FraudDetectionResult result = new FraudDetectionResult();
-        result.riskFactors = new List<String>();
-        result.riskScore = 0;
+// @AuraEnabled
+// public static FraudDetectionResult analyzeFraudRisk(
+//     String signatureRequestId,
+//     String signerBehaviorData
+// ) {
+//     try {
+//         FraudDetectionResult result = new FraudDetectionResult();
+//         result.riskFactors = new List<String>();
+//         result.riskScore = 0;
 
-        // Get signature request context
-        Signature_Request__c request = [
-            SELECT Id, SignerEmail__c, CreatedDate, DocumentId__c, DocumentId__r.ContractType__c
-            FROM Signature_Request__c
-            WHERE Id = :signatureRequestId
-            LIMIT 1
-        ];
+//         // Get signature request context
+//         Signature_Request__c request = [
+//             SELECT Id, SignerEmail__c, CreatedDate, DocumentId__c, DocumentId__r.ContractType__c
+//             FROM Signature_Request__c
+//             WHERE Id = :signatureRequestId
+//             LIMIT 1
+//         ];
 
-        // Analyze signing velocity (too fast = suspicious)
-        Map<String, Object> behaviorData = (Map<String, Object>) JSON.deserializeUntyped(signerBehaviorData);
-        if (behaviorData.containsKey('timeToSign')) {
-            Integer timeToSign = (Integer) behaviorData.get('timeToSign');
-            if (timeToSign < 30) { // Less than 30 seconds
-                result.riskFactors.add('Extremely fast signing time');
-                result.riskScore += 25;
-            } else if (timeToSign < 60) {
-                result.riskFactors.add('Fast signing time');
-                result.riskScore += 10;
-            }
-        }
+//         // Analyze signing velocity (too fast = suspicious)
+//         Map<String, Object> behaviorData = (Map<String, Object>) JSON.deserializeUntyped(signerBehaviorData);
+//         if (behaviorData.containsKey('timeToSign')) {
+//             Integer timeToSign = (Integer) behaviorData.get('timeToSign');
+//             if (timeToSign < 30) { // Less than 30 seconds
+//                 result.riskFactors.add('Extremely fast signing time');
+//                 result.riskScore += 25;
+//             } else if (timeToSign < 60) {
+//                 result.riskFactors.add('Fast signing time');
+//                 result.riskScore += 10;
+//             }
+//         }
 
-        // Check for multiple requests from same email
-        List<Signature_Request__c> recentRequests = [
-            SELECT Id
-            FROM Signature_Request__c
-            WHERE SignerEmail__c = :request.SignerEmail__c
-            AND CreatedDate >= :System.now().addHours(-24)
-        ];
-        if (recentRequests.size() > 5) {
-            result.riskFactors.add('Multiple signature requests from same email in 24h');
-            result.riskScore += 20;
-        }
+//         // Check for multiple requests from same email
+//         List<Signature_Request__c> recentRequests = [
+//             SELECT Id
+//             FROM Signature_Request__c
+//             WHERE SignerEmail__c = :request.SignerEmail__c
+//             AND CreatedDate >= :System.now().addHours(-24)
+//         ];
+//         if (recentRequests.size() > 5) {
+//             result.riskFactors.add('Multiple signature requests from same email in 24h');
+//             result.riskScore += 20;
+//         }
 
-        // Analyze document type risk factors
-        if (request.DocumentId__r.ContractType__c == 'Financial') {
-            result.riskScore += 5; // Financial documents inherently higher risk
-        }
-// Check IP geolocation consistency
-if (behaviorData.containsKey('ipGeolocation')) {
-    // Implementation would check against historical patterns
-    result.riskScore += validateGeolocationConsistency(
-        request.SignerEmail__c,
-        (String) behaviorData.get('ipGeolocation')
-    );
-}
+//         // Analyze document type risk factors
+//         if (request.DocumentId__r.ContractType__c == 'Financial') {
+//             result.riskScore += 5; // Financial documents inherently higher risk
+//         }
+// // Check IP geolocation consistency
+// if (behaviorData.containsKey('ipGeolocation')) {
+//     // Implementation would check against historical patterns
+//     result.riskScore += validateGeolocationConsistency(
+//         request.SignerEmail__c,
+//         (String) behaviorData.get('ipGeolocation')
+//     );
+// }
 
-// Calculate final risk level
-if (result.riskScore >= 70) {
-    result.riskLevel = 'CRITICAL';
-    result.recommendation = 'Block signature and require manual verification';
-} else if (result.riskScore >= 40) {
-    result.riskLevel = 'HIGH';
-    result.recommendation = 'Require additional verification steps';
-} else if (result.riskScore >= 20) {
-    result.riskLevel = 'MEDIUM';
-    result.recommendation = 'Monitor closely and log additional details';
-} else {
-    result.riskLevel = 'LOW';
-    result.recommendation = 'Proceed with standard verification';
-}
+// // Calculate final risk level
+// if (result.riskScore >= 70) {
+//     result.riskLevel = 'CRITICAL';
+//     result.recommendation = 'Block signature and require manual verification';
+// } else if (result.riskScore >= 40) {
+//     result.riskLevel = 'HIGH';
+//     result.recommendation = 'Require additional verification steps';
+// } else if (result.riskScore >= 20) {
+//     result.riskLevel = 'MEDIUM';
+//     result.recommendation = 'Monitor closely and log additional details';
+// } else {
+//     result.riskLevel = 'LOW';
+//     result.recommendation = 'Proceed with standard verification';
+// }
 
-result.signatureRequestId = signatureRequestId;
-result.analysisTimestamp = System.now();
-return result;
-} catch (Exception e) {
-    throw new AuraHandledException('Fraud analysis failed: ' + e.getMessage());
-}
-}
+// result.signatureRequestId = signatureRequestId;
+// result.analysisTimestamp = System.now();
+// return result;
+// } catch (Exception e) {
+//     throw new AuraHandledException('Fraud analysis failed: ' + e.getMessage());
+// }
+// }
 
 private static Integer validateGeolocationConsistency(String email, String currentLocation) {
     // Check against historical signing locations
@@ -307,5 +307,15 @@ public class BiometricValidationResult {
     @AuraEnabled public Decimal antiSpoofingScore;
     @AuraEnabled public Decimal deviceTrustScore;
     @AuraEnabled public Decimal overallTrustScore;
+    @AuraEnabled public Boolean isValid;
 }
-        }
+
+public class FraudDetectionResult {
+    @AuraEnabled public String signatureRequestId;
+    @AuraEnabled public Decimal riskScore;
+    @AuraEnabled public String riskLevel;
+    @AuraEnabled public String recommendation;
+    @AuraEnabled public List<String> riskFactors;
+    @AuraEnabled public Datetime analysisTimestamp;
+}
+}

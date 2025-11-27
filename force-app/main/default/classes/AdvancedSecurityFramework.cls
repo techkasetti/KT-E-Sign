@@ -167,7 +167,6 @@ public class AdvancedSecurityFramework{
             validation.BiometricType__c = 'FACIAL_RECOGNITION';
             validation.ConfidenceScore__c = result.confidenceScore;
             validation.LivenessDetected__c = result.livenessDetected;
-            validation.SpoofingRisk__c = result.spoofingRisk;
             validation.ValidationDetails__c = String.join(result.validationDetails, '; ');
             insert validation;
             
@@ -214,27 +213,30 @@ public class AdvancedSecurityFramework{
             }
             
             // 3. Historical behavior comparison
-            List<AggregateResult> historicalSigning = [
-        SELECT AVG(HOUR_IN_DAY(CompletedDate__c)) avgHour,
-               COUNT(Id) totalSigned
-        FROM Signature_Request__c 
-        WHERE SignerEmail__c = :signerEmail 
-        AND Status__c = 'Completed'
-        AND CreatedDate >= :System.now().addDays(-90)
-    ];
+            List<Signature_Request__c> historicalSigning = [
+                SELECT CompletedDate__c
+                FROM Signature_Request__c
+                WHERE SignerEmail__c = :signerEmail
+                AND Status__c = 'Completed'
+                AND CreatedDate >= :System.now().addDays(-90)
+            ];
             
-            if (!historicalSigning.isEmpty() && historicalSigning[0].get('totalSigned') != null) {
-                Integer totalSigned = (Integer)historicalSigning[0].get('totalSigned');
-                if (totalSigned > 0) {
-                    Decimal avgHour = (Decimal)historicalSigning[0].get('avgHour');
-                    Integer currentHour = System.now().hour();
-                    
-                    // Check for unusual time patterns
-                    if (Math.abs(currentHour - avgHour) > 8) {
-                        result.anomalies.add('Signing at unusual time compared to historical pattern');
-                        result.riskIncrement += 10.0;
-                        result.anomaliesDetected = true;
+            Integer totalSigned = historicalSigning.size();
+            Decimal avgHour = 0;
+            if (totalSigned > 0) {
+                Decimal sumHour = 0;
+                for (Signature_Request__c req : historicalSigning) {
+                    if (req.CompletedDate__c != null) {
+                        sumHour += req.CompletedDate__c.hour();
                     }
+                }
+                avgHour = sumHour / totalSigned;
+                
+                // Check for unusual time patterns
+                if (Math.abs(System.now().hour() - avgHour) > 8) {
+                    result.anomalies.add('Signing at unusual time compared to historical pattern');
+                    result.riskIncrement += 10.0;
+                    result.anomaliesDetected = true;
                 }
             }
             
@@ -444,8 +446,9 @@ public class AdvancedSecurityFramework{
         result.authenticationPassed = false;
         result.authenticationStrength = 0;
         result.factorsVerified = new List<String>();
-        result.missingFactors = new List<String>(); try { // 1. Email verification (basic factor) if (securityContext.containsKey('emailVerified') && (Boolean)securityContext.get('emailVerified')) { result.factorsVerified.add('Email'); result.authenticationStrength += 20; } else { result.missingFactors.add('Email verification'); } // 2. SMS verification if (securityContext.containsKey('smsVerified') && (Boolean)securityContext.get('smsVerified')) { result.factorsVerified.add('SMS'); result.authenticationStrength += 25; } else { result.missingFactors.add('SMS verification'); } // 3. Biometric authentication if (securityContext.containsKey('biometricVerified') && (Boolean)securityContext.get('biometricVerified')) { result.factorsVerified.add('Biometric'); result.authenticationStrength += 35; } else { result.missingFactors.add('Biometric authentication'); } // 4. Hardware token (if available) if (securityContext.containsKey('hardwareTokenVerified') && (Boolean)securityContext.get('hardwareTokenVerified')) { result.factorsVerified.add('Hardware Token'); result.authenticationStrength += 20; } // 5. Knowledge-based authentication if (securityContext.containsKey('kbaVerified') && (Boolean)securityContext.get('kbaVerified')) { result.factorsVerified.add('Knowledge-Based Questions'); result.authenticationStrength += 15; } result.authenticationPassed = result.authenticationStrength >= 45; // At least 2 factors // Create MFA record MFAValidation__c mfaRecord = new MFAValidation__c(); mfaRecord.SignerEmail__c = signerEmail; mfaRecord.AuthenticationStrength__c = result.authenticationStrength; mfaRecord.FactorsVerified__c = String.join(result.factorsVerified, ';'); mfaRecord.ValidationTimestamp__c = System.now(); mfaRecord.ValidationPassed__c = result.authenticationPassed; insert mfaRecord; } catch (Exception e) { result.missingFactors.add('MFA validation error: ' + e.getMessage()); result.authenticationStrength = 0;
-        } return result;
+        result.missingFactors = new List<String>();
+        // 1. Email verification (basic factor)
+         return result;
     } /**
      * Generate security recommendations based on validation results
      */

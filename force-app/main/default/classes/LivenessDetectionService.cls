@@ -1,4 +1,17 @@
 public class LivenessDetectionService {
+        public class LivenessResult {
+        
+        public Boolean isLive;
+        public Decimal confidence;
+        
+        public String status;
+
+        public LivenessResult(Boolean isLive, Decimal confidence, String status) {
+            this.isLive = isLive;
+            this.confidence = confidence;
+            this.status = status;
+        }
+    }
     @AuraEnabled
     public static Id enrollBiometricTemplate(Id userId, String modality, Blob biometricBlob, String metaJson) {
   // call external secure biometric enrollment service (callout)
@@ -19,10 +32,9 @@ public class LivenessDetectionService {
     Map<String,Object> r = (Map<String,Object>)JSON.deserializeUntyped(resp.getBody());
     Biometric_Template__c t = new Biometric_Template__c(
        User__c = userId,
-       Modality__c = modality,
+     
        External_Template_Id__c = (String)r.get('id'),
-       Confidence__c = Decimal.valueOf(r.get('confidence'))
-    );
+Confidence__c = (Decimal)r.get('confidence')    );
     insert t;
     return t.Id;
   } else {
@@ -31,7 +43,7 @@ public class LivenessDetectionService {
   }
 }
 
-    @AuraEnabled
+    
     public static LivenessResult performLivenessCheck(String imageData) {
         try {
             // Integrate with biometric service (AWS Rekognition/Azure Face API)
@@ -59,7 +71,7 @@ public class LivenessDetectionService {
     }
 
 
-        @AuraEnabled
+        
     public static LivenessResult performLivenessCheck(String imageData, Id signatureRequestId) {
         try {
             // Integrate with biometric service

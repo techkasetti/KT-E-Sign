@@ -1,58 +1,45 @@
 public class WebhookSenderJob implements Queueable, Database.AllowsCallouts {
-        private WebhookRequest request;
-        public WebhookSenderJob(WebhookRequest req) { this.request = req; }
 
-        public void execute(QueueableContext ctx) {
-            try {
-                Http http = new Http();
-                HttpRequest httpReq = new HttpRequest();
-                // For subscription-based endpoints, you'd lookup subscription endpoint; using NamedCredential placeholder for example
-                String endpoint = getSubscriptionEndpoint(request.subscriptionId); // implement according to your model
-                httpReq.setEndpoint(endpoint);
-                httpReq.setMethod('POST');
-                httpReq.setHeader('Content-Type', 'application/json');
-                // HMAC signature: sha256=base64(HMAC(secret, payload))
-                String signature = generateHmacSHA256Signature(request.payload, request.secretKey);
-                httpReq.setHeader('X-Signature', signature);
-                httpReq.setHeader('X-Event-Type', request.eventType);
-                httpReq.setBody(request.payload);
-                httpReq.setTimeout(WEBHOOK_TIMEOUT_MS);
+    private WebhookManager.WebhookRequest webhookRequest;
+    private static final Integer WEBHOOK_TIMEOUT_MS = 30000;
 
-                HttpResponse res = http.send(httpReq);
+    public WebhookSenderJob(WebhookManager.WebhookRequest request) {
+        this.webhookRequest = request;
+    }
 
-                Webhook_Log__c log = new Webhook_Log__c(
-                    Subscription_Id__c = request.subscriptionId,
-                    Related_Record_Id__c = request.recordId,
-                    Payload__c = request.payload,
-                    Status_Code__c = String.valueOf(res.getStatusCode()),
-                    Response__c = res.getBody(),
-                    Attempt__c = request.attempt + 1,
-                    Logged_At__c = System.now()
-                );
-                insert log;
+    public void execute(QueueableContext context) {
+        try {
+            Http http = new Http();
+            HttpRequest httpReq = new HttpRequest();
+            httpReq.setEndpoint(webhookRequest.webhookUrl);
+            httpReq.setMethod('POST');
+            httpReq.setHeader('Content-Type', 'application/json');
 
-                if (res.getStatusCode() >= 200 && res.getStatusCode() < 300) {
-                    // success -> done
-                    return;
-                } else {
-                    // schedule retry
-                    scheduleRetry(request.subscriptionId, request.eventType, request.recordId, request.payload, request.secretKey, request.attempt + 1);
-                }
-            } catch (Exception ex) {
-                // Log error
-                Webhook_Log__c log = new Webhook_Log__c(
-                    Subscription_Id__c = request.subscriptionId,
-                    Related_Record_Id__c = request.recordId,
-                    Payload__c = request.payload,
-                    Status_Code__c = 'EXCEPTION',
-                    Response__c = ex.getMessage(),
-                    Attempt__c = request.attempt + 1,
-                    Logged_At__c = System.now()
-                );
-                insert log;
-                scheduleRetry(request.subscriptionId, request.eventType, request.recordId, request.payload, request.secretKey, request.attempt + 1);
+            String signature = generateWebhookSignature(webhookRequest.payload, webhookRequest.secretKey);
+            httpReq.setHeader('X-Webhook-Signature', signature);
+            httpReq.setHeader('X-Event-Type', webhookRequest.eventType);
+            httpReq.setBody(webhookRequest.payload);
+            httpReq.setTimeout(WEBHOOK_TIMEOUT_MS);
+
+            HttpResponse response = http.send(httpReq);
+
+            if (response.getStatusCode() < 200 || response.getStatusCode() >= 300) {
+                System.debug('Webhook delivery failed with status ' + response.getStatusCode());
+                // Optionally, re-schedule a retry here if needed
             }
+        } catch (Exception e) {
+            System.debug('Webhook delivery failed: ' + e.getMessage());
+            // Optionally, handle the exception, e.g., by scheduling a retry
         }
     }
 
-   
+    private static String generateWebhookSignature(String payload, String secretKey) {
+        if (String.isBlank(payload) || String.isBlank(secretKey)) {
+            return '';
+        }
+        Blob payloadBlob = Blob.valueOf(payload);
+        Blob keyBlob = Blob.valueOf(secretKey);
+        Blob signature = Crypto.generateMac('HmacSHA256', payloadBlob, keyBlob);
+        return 'sha256=' + EncodingUtil.base64Encode(signature);
+    }
+}

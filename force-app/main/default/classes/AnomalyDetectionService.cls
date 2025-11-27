@@ -1,4 +1,39 @@
 public class AnomalyDetectionService {
+    // Result class for anomaly detection
+    public class AnomalyResult {
+        @AuraEnabled public Boolean isAnomaly;
+        @AuraEnabled public Decimal anomalyScore;
+        public AnomalyResult(Boolean isAnomaly, Decimal anomalyScore) {
+            this.isAnomaly = isAnomaly;
+            this.anomalyScore = anomalyScore;
+        }
+    }
+    // Trigger a security alert for high-risk anomalies
+    private static void triggerSecurityAlert(Id userId, Decimal anomalyScore) {
+        // Example: send notification or log alert
+        System.debug('Security alert triggered for user: ' + userId + ', anomaly score: ' + anomalyScore);
+    }
+    // Log detected security anomaly
+    private static void logSecurityAnomaly(Id userId, Decimal anomalyScore, Map<String, Object> behaviorData) {
+        // Example: log anomaly to custom object or audit trail
+        // Replace with actual implementation as needed
+        System.debug('Security anomaly detected for user: ' + userId + ', score: ' + anomalyScore + ', data: ' + JSON.serialize(behaviorData));
+    }
+    // Helper to prepare feature vector for ML model
+    private static List<Decimal> prepareFeaturesVector(Map<String, Object> behaviorData) {
+        List<Decimal> features = new List<Decimal>();
+        // Example: extract numeric features from behaviorData
+        for (String key : behaviorData.keySet()) {
+            Object val = behaviorData.get(key);
+            if (val instanceof Decimal) {
+                features.add((Decimal)val);
+            } else if (val instanceof Integer) {
+                features.add(Decimal.valueOf((Integer)val));
+            }
+            // Add more feature extraction logic as needed
+        }
+        return features;
+    }
     @future(callout=true)
     public static void analyzeUserBehavior(String userId, String sessionData) {
         // Prepare feature vectors for ML model
@@ -8,10 +43,6 @@ public class AnomalyDetectionService {
     }
     @AuraEnabled
     public static AnomalyResult detectAnomalies(Id userId, Map<String, Object> behaviorData) {
-
-
-
-
         List<Decimal> features = prepareFeaturesVector(behaviorData);
         
         // Call external AI/ML service

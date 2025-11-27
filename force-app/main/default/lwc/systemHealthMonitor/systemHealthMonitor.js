@@ -1,7 +1,3 @@
-
-
-
-
 // Developer_build_step_by_step_impl_e_sign v11 ------------------------------------------------------
 import { LightningElement, track, wire } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
@@ -9,7 +5,6 @@ import getSystemHealthData from '@salesforce/apex/SystemHealthController.getSyst
 import getSystemAlerts from '@salesforce/apex/SystemHealthController.getSystemAlerts';
 import getPerformanceMetrics from '@salesforce/apex/SystemHealthController.getPerformanceMetrics';
 import { loadScript } from 'lightning/platformResourceLoader';
-import ChartJS from '@salesforce/resourceUrl/ChartJS';
 
 export default class SystemHealthMonitor extends LightningElement {
     @track healthData = null;

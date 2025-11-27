@@ -42,24 +42,49 @@ public with sharing class SignatureAnalyticsService {
     public static List<UserBehaviorPattern> analyzeUserBehaviorPatterns() {
         List<UserBehaviorPattern> patterns = new List<UserBehaviorPattern>();
         
-        // Analyze signing patterns by user
-        List<AggregateResult> userAnalytics = [
-            SELECT SignerEmail__c, 
-                   AVG(Time_to_Complete__c) avgTime,
-                   COUNT(Id) totalSigned,
-                   AVG(HOUR_IN_DAY(CompletedDate__c)) avgHour
+        // Helper map to aggregate data by user email
+        Map<String, List<Signature_Request__c>> requestsByUser = new Map<String, List<Signature_Request__c>>();
+
+        // Query for individual signature requests
+        List<Signature_Request__c> completedRequests = [
+            SELECT SignerEmail__c, Time_to_Complete__c, CompletedDate__c
             FROM Signature_Request__c 
-            WHERE Status__c = 'Completed' AND CompletedDate__c = LAST_N_DAYS:30
-            GROUP BY SignerEmail__c
-            HAVING COUNT(Id) > 1
+            WHERE Status__c = 'Completed' AND CompletedDate__c = LAST_N_DAYS:30 AND SignerEmail__c != null
         ];
-        
-        for (AggregateResult result : userAnalytics) {
+
+        // Group requests by signer email in Apex
+        for (Signature_Request__c req : completedRequests) {
+            if (!requestsByUser.containsKey(req.SignerEmail__c)) {
+                requestsByUser.put(req.SignerEmail__c, new List<Signature_Request__c>());
+            }
+            requestsByUser.get(req.SignerEmail__c).add(req);
+        }
+
+        // Process each user's aggregated data
+        for (String email : requestsByUser.keySet()) {
+            List<Signature_Request__c> userRequests = requestsByUser.get(email);
+            
+            // Skip users with only one signature for this analysis
+            if (userRequests.size() <= 1) {
+                continue;
+            }
+
+            Decimal totalCompletionTime = 0;
+            Decimal totalSigningHour = 0;
+            for (Signature_Request__c req : userRequests) {
+                if (req.Time_to_Complete__c != null) {
+                    totalCompletionTime += req.Time_to_Complete__c;
+                }
+                if (req.CompletedDate__c != null) {
+                    totalSigningHour += req.CompletedDate__c.hourGmt();
+                }
+            }
+
             UserBehaviorPattern pattern = new UserBehaviorPattern();
-            pattern.userEmail = (String) result.get('SignerEmail__c');
-            pattern.averageCompletionTime = (Decimal) result.get('avgTime');
-            pattern.totalSignatures = (Integer) result.get('totalSigned');
-            pattern.preferredSigningHour = (Integer) result.get('avgHour');
+            pattern.userEmail = email;
+            pattern.totalSignatures = userRequests.size();
+            pattern.averageCompletionTime = totalCompletionTime / userRequests.size();
+            pattern.preferredSigningHour = (Integer)(totalSigningHour / userRequests.size());
             
             // Classify user behavior
             if (pattern.averageCompletionTime < 5) {
@@ -76,4 +101,73 @@ public with sharing class SignatureAnalyticsService {
         return patterns;
     }
     
+    private static Date getStartDate(String dateRange) {
+        Date startDate = Date.today();
+        if (dateRange == 'LAST_7_DAYS') {
+            startDate = Date.today().addDays(-7);
+        } else if (dateRange == 'LAST_30_DAYS') {
+            startDate = Date.today().addDays(-30);
+        } else if (dateRange == 'LAST_90_DAYS') {
+            startDate = Date.today().addDays(-90);
+        }
+        return startDate;
+    }
+
+    private static List<TrendData> calculateCompletionTrends(Date startDate, Date endDate) {
+        List<TrendData> trendData = new List<TrendData>();
+        Map<Date, Integer> completionCounts = new Map<Date, Integer>();
+
+        List<AggregateResult> results = [
+            SELECT CompletedDate__c completedDate, COUNT(Id) total
+            FROM Signature_Request__c
+            WHERE Status__c = 'Completed' AND CompletedDate__c >= :startDate AND CompletedDate__c <= :endDate
+            GROUP BY CompletedDate__c
+            ORDER BY CompletedDate__c
+        ];
+
+        for (AggregateResult ar : results) {
+            Date completedDate = (Date)ar.get('completedDate');
+            completionCounts.put(completedDate, (Integer)ar.get('total'));
+        }
+        
+        for (Integer i = 0; i <= startDate.daysBetween(endDate); i++) {
+            Date currentDay = startDate.addDays(i);
+            Integer count = completionCounts.get(currentDay);
+            if (count == null) {
+                count = 0;
+            }
+            trendData.add(new TrendData(currentDay, count));
+        }
+
+        return trendData;
+    }
+
+    public class SignatureAnalytics {
+        @AuraEnabled public Decimal completionRate { get; set; }
+        @AuraEnabled public Integer totalRequests { get; set; }
+        @AuraEnabled public Integer completedRequests { get; set; }
+        @AuraEnabled public Map<String, Integer> statusBreakdown { get; set; }
+        @AuraEnabled public List<TrendData> trendData { get; set; }
+        public SignatureAnalytics() {
+            statusBreakdown = new Map<String, Integer>();
+            trendData = new List<TrendData>();
+        }
+    }
+
+    public class UserBehaviorPattern {
+        @AuraEnabled public String userEmail { get; set; }
+        @AuraEnabled public Decimal averageCompletionTime { get; set; }
+        @AuraEnabled public Integer totalSignatures { get; set; }
+        @AuraEnabled public Integer preferredSigningHour { get; set; }
+        @AuraEnabled public String behaviorType { get; set; }
+    }
+
+    public class TrendData {
+        @AuraEnabled public Date dateValue { get; set; }
+        @AuraEnabled public Integer count { get; set; }
+        public TrendData(Date dateValue, Integer count) {
+            this.dateValue = dateValue;
+            this.count = count;
+        }
+    }
 }

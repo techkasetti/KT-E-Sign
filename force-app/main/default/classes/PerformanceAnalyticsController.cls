@@ -91,7 +91,7 @@ public class PerformanceAnalyticsController {
             List<DailyPerformanceTrend> trends = new List<DailyPerformanceTrend>();
             for (AggregateResult stat : trendStats) {
                 DailyPerformanceTrend trend = new DailyPerformanceTrend();
-                trend.date = ((Date) stat.get('day')).format();
+                trend.performanceDate = ((Date) stat.get('day')).format();
                 trend.avgGenerationTime = (Decimal) stat.get('avgTime');
                 trend.documentCount = (Integer) stat.get('docCount');
                 trends.add(trend);
@@ -378,7 +378,7 @@ private static CompliancePerformanceMetrics getCompliancePerformanceMetrics() {
         List<ComplianceTrend> trends = new List<ComplianceTrend>();
         for (AggregateResult stat : compliancetrends) {
             ComplianceTrend trend = new ComplianceTrend();
-            trend.date = ((Date) stat.get('day')).format();
+            trend.assessmentDate = ((Date) stat.get('day')).format();
             trend.avgScore = (Decimal) stat.get('avgScore');
             trends.add(trend);
         }
@@ -406,7 +406,7 @@ private static CompliancePerformanceMetrics getCompliancePerformanceMetrics() {
         
         // Violation frequency analysis
         List<AggregateResult> violationStats = [
-            SELECT ViolationType__c, COUNT(Id) violationCount, AVG(Severity__c) avgSeverity
+            SELECT ViolationType__c, COUNT(Id) violationCount
             FROM ComplianceViolationLog__c
             WHERE DetectedDate__c = LAST_N_DAYS:30
             GROUP BY ViolationType__c
@@ -474,7 +474,7 @@ public class DocumentTypePerformance {
 }
 
 public class DailyPerformanceTrend {
-    @AuraEnabled public String date;
+    @AuraEnabled public String performanceDate;
     @AuraEnabled public Decimal avgGenerationTime;
     @AuraEnabled public Integer documentCount;
 }
@@ -547,7 +547,7 @@ public class CompliancePerformanceMetrics {
 }
 
 public class ComplianceTrend {
-    @AuraEnabled public String date;
+    @AuraEnabled public String assessmentDate;
     @AuraEnabled public Decimal avgScore;
 }
 

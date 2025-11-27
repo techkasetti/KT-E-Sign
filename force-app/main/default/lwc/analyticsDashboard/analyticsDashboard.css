@@ -1,4 +1,4 @@
- @media (max-width: 768px) {
+@media (max-width: 768px) {
     .signature-canvas {
         width: 100%;
         max-width: 350px;
@@ -34,10 +34,9 @@
     lightning-button {
         min-height: 44px; 
     }
-} */
+}
 
-
- Main container
+/* Main container */
 .metrics-row,
 .charts-row {
     margin-bottom: 1rem;
@@ -327,4 +326,4 @@
 .benchmark-item:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-} 
+}

@@ -1,12 +1,12 @@
 public class AdvancedNotificationService {
-     @AuraEnabled
+     
     public class AnalyticsSummary {
-        @AuraEnabled public Integer totalDocuments;
-        @AuraEnabled public Decimal averageGenerationTimeSeconds;
-        @AuraEnabled public Map<String,Integer> docsByRegion;
-        @AuraEnabled public Map<String, Decimal> performanceByTemplate;
-        @AuraEnabled public Decimal overallComplianceScore;
-        @AuraEnabled public List<String> insights;
+        public Integer totalDocuments;
+        public Decimal averageGenerationTimeSeconds;
+        public Map<String,Integer> docsByRegion;
+        public Map<String, Decimal> performanceByTemplate;
+        public Decimal overallComplianceScore;
+        public List<String> insights;
         public AnalyticsSummary(){ docsByRegion = new Map<String,Integer>(); performanceByTemplate = new Map<String,Decimal>(); insights = new List<String>(); }
     }
 
@@ -122,5 +122,52 @@ public class AdvancedNotificationService {
             logNotificationFailure(notificationType, recipientId, e.getMessage());
             return false;
         }
+    }
+    
+    // NotificationRequest wrapper class
+    public class NotificationRequest {
+        public String type;
+        public String recipientId;
+        public Map<String, Object> data;
+        public Datetime timestamp;
+    }
+
+    // Stub notification handler methods
+    private static Boolean sendSignatureRequestNotification(NotificationRequest request) {
+        // TODO: Implement actual notification logic
+        return true;
+    }
+    private static Boolean sendSignatureCompletedNotification(NotificationRequest request) {
+        // TODO: Implement actual notification logic
+        return true;
+    }
+    private static Boolean sendDocumentExpiredNotification(NotificationRequest request) {
+        // TODO: Implement actual notification logic
+        return true;
+    }
+    private static Boolean sendComplianceAlertNotification(NotificationRequest request) {
+        // TODO: Implement actual notification logic
+        return true;
+    }
+    private static Boolean sendSystemAlertNotification(NotificationRequest request) {
+        // TODO: Implement actual notification logic
+        return true;
+    }
+    private static Boolean sendBatchReportNotification(NotificationRequest request) {
+        // TODO: Implement actual notification logic
+        return true;
+    }
+    private static Boolean sendPredictiveAlertNotification(NotificationRequest request) {
+        // TODO: Implement actual notification logic
+        return true;
+    }
+    private static Boolean sendGenericNotification(NotificationRequest request) {
+        // TODO: Implement actual notification logic
+        return true;
+    }
+
+    private static void logNotificationFailure(String notificationType, String recipientId, String errorMessage) {
+        // TODO: Implement actual logging logic
+        System.debug('Notification failure: ' + notificationType + ', Recipient: ' + recipientId + ', Error: ' + errorMessage);
     }
 }

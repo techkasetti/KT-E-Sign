@@ -1,4 +1,3 @@
-
 public class MLIntegrationService {
     
     private static final String ML_ENDPOINT = 'callout:ML_Service_Endpoint';
@@ -194,6 +193,7 @@ public class DocumentClassificationResult {
     @AuraEnabled public List<String> keyPhrases;
     @AuraEnabled public Boolean success;
     @AuraEnabled public String errorMessage;
+    @AuraEnabled public String rawResponse;
 }
 
 public class FraudScoringResult {

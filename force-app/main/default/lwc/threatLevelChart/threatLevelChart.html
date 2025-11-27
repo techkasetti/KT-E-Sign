@@ -1,0 +1,31 @@
+<!-- threatLevelChart.html -->
+<template>
+    <lightning-card title="Today's Threat Level Distribution" icon-name="utility:warning">
+        <div class="slds-p-around_medium">
+            <!-- Loading Spinner -->
+            <if:true if:true={isLoading}>
+                <lightning-spinner alternative-text="Loading chart data..." size="medium"></lightning-spinner>
+            </if:true>
+
+            <!-- Chart Canvas -->
+            <div class={chartContainerClass} lwc:dom="manual"></div>
+
+            <!-- Error Message -->
+            <if:true if:true={error}>
+                <div class="slds-text-color_error slds-p-around_small">
+                    <p>An error occurred while loading the chart:</p>
+                    <p>{errorText}</p>
+                </div>
+            </if:true>
+
+            <!-- No Data Message -->
+            <if:true if:true={isChartRendered}>
+                <if:false if:false={hasData}>
+                    <div class="slds-align_absolute-center slds-p-around_medium">
+                        No threat data available for today.
+                    </div>
+                </if:false>
+            </if:true>
+        </div>
+    </lightning-card>
+</template>

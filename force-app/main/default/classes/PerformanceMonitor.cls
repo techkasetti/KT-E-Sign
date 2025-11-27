@@ -9,7 +9,7 @@ public class PerformanceMonitor {
         heapSizes.put(trackingKey, Limits.getHeapSize());
     }
     public static void startTracking(String operationName) {
-        startTimes.put(operationName, System.currentTimeMillis());
+        startTimes.put(operationName, System.now());
     }
     
     
@@ -39,17 +39,17 @@ public class PerformanceMonitor {
     }
     
     public static void endTracking(String operationName) {
-        Long startTime = startTimes.get(operationName);
+        DateTime startTime = startTimes.get(operationName);
         if (startTime != null) {
-            Long executionTime = System.currentTimeMillis() - startTime;
+            Long executionTime = System.now().getTime() - startTime.getTime();
             
             // Create performance benchmark record
             PerformanceBenchmark__c benchmark = new PerformanceBenchmark__c(
                 OperationType__c = operationName,
-            ExecutionTime__c = executionTime,
-            Timestamp__c = System.now(),
-            UserId__c = UserInfo.getUserId()
-                );
+                ExecutionTime__c = executionTime,
+                Timestamp__c = System.now(),
+                UserId__c = UserInfo.getUserId()
+            );
             
             insert benchmark;
             
@@ -83,27 +83,6 @@ public class PerformanceMonitor {
         // Clean up
         startTimes.remove(trackingKey);
         heapSizes.remove(trackingKey);
-    }
-    
-    
-    public static void endTrackingWithError(String operationName, String recordId, String errorMessage) {
-        Long startTime = startTimes.get(operationName);
-        if (startTime != null) {
-            Long executionTime = System.currentTimeMillis() - startTime;
-            
-            PerformanceBenchmark__c benchmark = new PerformanceBenchmark__c(
-                OperationType__c = operationName,
-            ExecutionTime__c = executionTime,
-            Timestamp__c = System.now(),
-            UserId__c = UserInfo.getUserId(),
-            RecordId__c = recordId,
-            ErrorMessage__c = errorMessage
-                );
-            
-            insert benchmark;
-            
-            startTimes.remove(operationName);
-        }
     }
     
     private static void logPerformanceBenchmark(String operationType, String recordId, DateTime startTime, DateTime endTime, Long executionTime, Long memoryUsage, String errorMessage) {
@@ -169,8 +148,9 @@ public class PerformanceMonitor {
         }
     }
     
-    private static String calculateSeverity(Long actualTime, Long threshold) {
-        Decimal ratio = (Decimal) actualTime / threshold;
+    private static String calculateSeverity(Decimal actualTime, Long threshold) {
+        if (threshold == null || threshold == 0) return 'LOW';
+        Decimal ratio = actualTime / threshold;
         if (ratio >= 3.0) return 'CRITICAL';
         if (ratio >= 2.0) return 'HIGH';
         if (ratio >= 1.5) return 'MEDIUM';

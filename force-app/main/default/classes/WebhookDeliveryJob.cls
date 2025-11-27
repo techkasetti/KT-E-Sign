@@ -1,5 +1,6 @@
 public class WebhookDeliveryJob implements Queueable, Database.AllowsCallouts {
-        private String subscriptionId; private String eventType; private Id recordId; private String payload; private String secret; private Integer attempt; private Integer timeoutMs;
+    private static final Integer MAX_RETRIES = 3;
+    private String subscriptionId; private String eventType; private Id recordId; private String payload; private String secret; private Integer attempt; private Integer timeoutMs;
         public WebhookDeliveryJob(String subscriptionId,String eventType,Id recordId,String payload,String secret,Integer attempt,Integer timeoutMs){
             this.subscriptionId=subscriptionId;this.eventType=eventType;this.recordId=recordId;this.payload=payload;this.secret=secret;this.attempt=attempt;this.timeoutMs=timeoutMs;
         }
@@ -73,5 +74,16 @@ public class WebhookDeliveryJob implements Queueable, Database.AllowsCallouts {
         } catch (Exception e) {
             System.debug('logWebhookDelivery failed: ' + e.getMessage());
         }
+    }
+
+    public class WebhookDelivery {
+        public String subscriptionId;
+        public String eventType;
+        public Id recordId;
+        public Datetime timestamp;
+        public Boolean success;
+        public String errorMessage;
+        public Integer statusCode;
+        public String responseBody;
     }
 }

@@ -67,7 +67,34 @@ public class ContextAwareAccessService {
             throw new AuraHandledException('Contextual access evaluation failed: ' + e.getMessage());
         }
     }
-    
+    // Helper method to get IP reputation score
+private static Decimal getIPReputationScore(String ipAddress) {
+    // TODO: Replace with real reputation logic or external service call
+    // For now, return a dummy value based on IP pattern
+    if (String.isNotBlank(ipAddress) && ipAddress.startsWith('192.')) {
+        return 0.9;
+    }
+    return 0.5;
+}
+
+// Static wrapper for BusinessHours.isWithin
+private static Boolean isWithin(Id businessHoursId, Datetime dt) {
+    // Call the standard BusinessHours method
+    return BusinessHours.isWithin(businessHoursId, dt);
+}
+
+// Helper method to get applicable policies
+private static List<ContextualPolicy__c> getApplicablePolicies(String resourceId, String action) {
+    // Query ContextualPolicy__c records based on resourceId and action
+    List<ContextualPolicy__c> policies = [
+        SELECT Id, Name, PolicyType__c, Conditions__c, Restrictions__c, IsActive__c
+                FROM ContextualPolicy__c
+                WHERE ResourceId__c = :resourceId
+                AND Action__c = :action
+                AND IsActive__c = true
+            ];
+            return policies;
+        }
     
 private static UserContextResult evaluateUserContext(String userId, Map<String, Object> context) {
         UserContextResult result = new UserContextResult();
@@ -167,11 +194,42 @@ private static UserContextResult evaluateUserContext(String userId, Map<String, 
 
         return result;
     }
-
+private static PolicyEvaluationResult evaluatePolicy(ContextualPolicy__c policy, Decimal contextScore, Map<String, Object> context) {
+    PolicyEvaluationResult result = new PolicyEvaluationResult();
+    // Example logic: check if contextScore meets policy threshold
+    if (policy.PolicyType__c == 'Threshold') {
+        Decimal requiredScore = 0.7;
+        if (contextScore >= requiredScore) {
+            result.isApplicable = true;
+            result.isGranted = true;
+            result.conditions.add('Context score meets threshold');
+        } else {
+            result.isApplicable = true;
+            result.isGranted = false;
+            result.restrictions.add('Context score below threshold');
+        }
+    } else {
+        // Default: mark as applicable but not granted
+        result.isApplicable = true;
+        result.isGranted = false;
+        result.restrictions.add('Policy type not handled');
+    }
+    return result;
+}
+private static String calculateConfidence(Decimal contextScore) {
+    if (contextScore >= 0.9) {
+        return 'High';
+    } else if (contextScore >= 0.7) {
+        return 'Medium';
+    } else {
+        return 'Low';
+    }
+}
     private static DeviceContextResult evaluateDeviceContext(Map<String, Object> context) {
         DeviceContextResult result = new DeviceContextResult();
         result.score = 0.5; // Base score
         result.factors = new List<String>();
+
 
         try {
             String deviceFingerprint = (String) context.get('deviceFingerprint');
@@ -262,7 +320,22 @@ private static UserContextResult evaluateUserContext(String userId, Map<String, 
 
         return result;
     }
-
+private static AccessDecision applyAdaptiveRestrictions(AccessDecision decision, Map<String, Object> context) {
+    // Example: Add a restriction if contextScore is below 0.8
+    if (decision.contextScore < 0.8) {
+        decision.restrictions.add('Adaptive restriction applied due to low context score');
+    }
+    return decision;
+}
+private static void logContextualAccessDecision(String userId, String resourceId, String action, AccessDecision decision, Map<String, Object> context) {
+    // For now, just log the decision details
+    System.debug('Contextual Access Decision Log:');
+    System.debug('UserId: ' + userId);
+    System.debug('ResourceId: ' + resourceId);
+    System.debug('Action: ' + action);
+    System.debug('Decision: ' + decision);
+    System.debug('Context: ' + context);
+}
     private static LocationContextResult evaluateLocationContext(Map<String, Object> context) {
         LocationContextResult result = new LocationContextResult();
         result.score = 0.5; // Base score
@@ -401,7 +474,7 @@ private static UserContextResult evaluateUserContext(String userId, Map<String, 
                 LIMIT 1
             ];
 
-            Boolean isBusinessHours = BusinessHours.isWithin(businessHours.Id, currentTime);
+Boolean isBusinessHours = isWithin(businessHours.Id, currentTime);            if (isBusinessHours) {
             if (isBusinessHours) {
                 result.score += 0.2;
                 result.factors.add('Access during business hours');
@@ -511,8 +584,9 @@ List<UserSession__c> recentSessions = [
         result.score -= 0.2;
         result.factors.add('Access during maintenance window');
     }
-    
-} catch (Exception e) {
+}
+        }
+ catch (Exception e) {
     System.debug('Temporal context evaluation error: ' + e.getMessage());
     result.score = 0.3; // Conservative fallback
     result.factors.add('Error in temporal context evaluation');
@@ -782,5 +856,18 @@ public class AccessDecision {
 @AuraEnabled public List<String> conditions;
 @AuraEnabled public List<String> restrictions;
 @AuraEnabled public String confidenceLevel;
+}
+// Result class for policy evaluation
+public class PolicyEvaluationResult {
+    @AuraEnabled public Boolean isApplicable;
+    @AuraEnabled public Boolean isGranted;
+    @AuraEnabled public List<String> conditions;
+    @AuraEnabled public List<String> restrictions;
+    public PolicyEvaluationResult() {
+        this.isApplicable = false;
+        this.isGranted = false;
+        this.conditions = new List<String>();
+        this.restrictions = new List<String>();
+    }
 }
 }

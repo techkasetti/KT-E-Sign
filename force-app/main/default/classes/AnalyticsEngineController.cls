@@ -173,19 +173,23 @@ public class AnalyticsEngineController {
         // Now methodStatsMap contains all the aggregated data per Signature Method
         
         Map<String, MethodPerformance> methodPerformance = new Map<String, MethodPerformance>();
-        for (AggregateResult result : methodStats) {
-            String method = (String) result.get('Signature_Method__c');
-            Integer total = (Integer) result.get('totalCount');
-            Integer completed = (Integer) result.get('completedCount');
-            Decimal avgTime = (Decimal) result.get('avgCompletionTime');
-            
+        for (AggregateResult result : methodStatsRaw) {
+            String method = (String) result.get('method');
+            Integer total = 0;
+            Integer completed = 0;
+            Decimal avgTime = (Decimal) result.get('avgTime');
+            if (methodStatsMap.containsKey(method)) {
+                Map<String, Object> stats = methodStatsMap.get(method);
+                total = (Integer) stats.get('totalCount');
+                completed = (Integer) stats.get('completedCount');
+                avgTime = (Decimal) stats.get('avgCompletionTime');
+            }
             MethodPerformance performance = new MethodPerformance();
             performance.method = method;
             performance.totalRequests = total;
             performance.completedRequests = completed;
             performance.completionRate = total > 0 ? (completed * 100.0 / total) : 0;
             performance.averageCompletionTime = avgTime;
-            
             methodPerformance.put(method, performance);
         }
         sigMetrics.methodPerformance = methodPerformance;
